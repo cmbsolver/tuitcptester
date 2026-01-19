@@ -54,10 +54,11 @@ public sealed partial class MainView : Toplevel
                     new("S_top", "F5", OnStopConnection),
                     new("_Remove", "F6", OnDisposeConnection),
                     new("Send _Message", "F7", OnSendManual),
+                    new("_Clear Logs", "F9", OnClearLogs)
                 }),
                 new MenuBarItem("_Tools", new MenuItem[]
                 {
-                    new("_Ping", "F8", OnPing)
+                    new("_Ping", "F8", OnPing),
                 }),
                 new MenuBarItem("T_hemes", CreateThemeMenuItems())
             ]
@@ -123,6 +124,7 @@ public sealed partial class MainView : Toplevel
             if (e.KeyCode == Key.F6) OnDisposeConnection();
             if (e.KeyCode == Key.F7) OnSendManual();
             if (e.KeyCode == Key.F8) OnPing();
+            if (e.KeyCode == Key.F9) OnClearLogs();
         };
     }
 

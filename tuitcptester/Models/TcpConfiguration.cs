@@ -48,6 +48,16 @@ public class Transaction
     /// Gets or sets the encoding used for the data.
     /// </summary>
     public TransactionEncoding Encoding { get; set; } = TransactionEncoding.Ascii;
+
+    /// <summary>
+    /// Gets or sets whether to append a carriage return (\r) to the data.
+    /// </summary>
+    public bool AppendReturn { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to append a newline (\n) to the data.
+    /// </summary>
+    public bool AppendNewline { get; set; }
 }
 
 /// <summary>

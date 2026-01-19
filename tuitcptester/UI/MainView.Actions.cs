@@ -39,15 +39,20 @@ public sealed partial class MainView
             X = 1, Y = 5,
             RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
         };
+
+        var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 7 };
+        var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 8 };
         
-        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 13, ColorScheme = ColorScheme };
-        dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup);
+        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 14, ColorScheme = ColorScheme };
+        dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox);
 
         var sendBtn = new Button { Text = "Send", IsDefault = true };
         sendBtn.Accepting += (s, e) => {
             var tx = new Transaction {
                 Data = dataField.Text,
-                Encoding = (TransactionEncoding)encodingGroup.SelectedItem
+                Encoding = (TransactionEncoding)encodingGroup.SelectedItem,
+                AppendReturn = returnCheckbox.CheckedState == CheckState.Checked,
+                AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
             };
             
             _selectedInstance.SendManual(tx);
@@ -143,5 +148,13 @@ public sealed partial class MainView
                              Status: {_selectedInstance.Status}
                              Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}
                              """;
+    }
+
+    /// <summary>
+    /// Clears the logs from the log view.
+    /// </summary>
+    private void OnClearLogs()
+    {
+        _logs.Clear();
     }
 }

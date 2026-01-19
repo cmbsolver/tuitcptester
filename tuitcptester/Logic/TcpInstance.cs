@@ -358,16 +358,20 @@ public class TcpInstance : IDisposable
     {
         try
         {
+            string dataToSend = tx.Data;
+            if (tx.AppendReturn) dataToSend += "\r";
+            if (tx.AppendNewline) dataToSend += "\n";
+
             byte[] data = tx.Encoding switch
             {
-                TransactionEncoding.Ascii => Encoding.ASCII.GetBytes(tx.Data),
-                TransactionEncoding.Hex => HexToBytes(tx.Data),
-                TransactionEncoding.Binary => Convert.FromBase64String(tx.Data), // Assuming Base64 for binary input
-                _ => Encoding.ASCII.GetBytes(tx.Data)
+                TransactionEncoding.Ascii => Encoding.ASCII.GetBytes(dataToSend),
+                TransactionEncoding.Hex => HexToBytes(dataToSend),
+                TransactionEncoding.Binary => Convert.FromBase64String(dataToSend), // Assuming Base64 for binary input
+                _ => Encoding.ASCII.GetBytes(dataToSend)
             };
 
             stream.Write(data, 0, data.Length);
-            Log($"Sent ({tx.Encoding}): {tx.Data}");
+            Log($"Sent ({tx.Encoding}): {dataToSend.Replace("\r", "\\r").Replace("\n", "\\n")}");
         }
         catch (Exception ex)
         {
