@@ -40,13 +40,13 @@ public sealed class MainView : Toplevel
                     new("_Client", "F3", OnNewClient),
                 }),
                 new MenuBarItem("_Control", new MenuItem[] {
-                    new("_Start", "Ctrl+S", OnStartConnection),
-                    new("S_top", "Ctrl+T", OnStopConnection),
-                    new("_Remove", "F5", OnDisposeConnection),
-                    new("Send _Message", "F3", OnSendManual),
+                    new("_Start", "F4", OnStartConnection),
+                    new("S_top", "F5", OnStopConnection),
+                    new("_Remove", "F6", OnDisposeConnection),
+                    new("Send _Message", "F7", OnSendManual),
                 }),
                 new MenuBarItem("_Tools", new MenuItem[] {
-                    new("_Ping", "", OnPing)
+                    new("_Ping", "F8", OnPing)
                 }),
                 new MenuBarItem("T_hemes", CreateThemeMenuItems())
             ]
@@ -101,6 +101,9 @@ public sealed class MainView : Toplevel
             if (e.KeyCode == Key.F3) OnNewClient();
             if (e.KeyCode == Key.F4) OnStopConnection();
             if (e.KeyCode == Key.F5) OnStartConnection();
+            if (e.KeyCode == Key.F6) OnDisposeConnection();
+            if (e.KeyCode == Key.F7) OnSendManual();
+            if (e.KeyCode == Key.F8) OnPing();
         };
     }
 

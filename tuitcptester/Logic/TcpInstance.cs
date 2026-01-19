@@ -190,6 +190,10 @@ public class TcpInstance : IDisposable
                 {
                     var client = _listener.AcceptTcpClient();
                     Log($"Accepted connection from {client.Client.RemoteEndPoint}");
+
+                    Status = ConnectionStatus.Connected;
+                    OnStatusChanged?.Invoke();
+
                     Task.Run(() =>
                     {
                         using (client)
@@ -226,7 +230,11 @@ public class TcpInstance : IDisposable
             if (stream.DataAvailable)
             {
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                if (bytesRead == 0) break;
+                if (bytesRead == 0)
+                {
+                    HandleDisconnect("Server closed the connection.");
+                    break;
+                }
 
                 string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
                 Log($"Received: {received}");
@@ -243,6 +251,19 @@ public class TcpInstance : IDisposable
             }
             Thread.Sleep(100);
         }
+    }
+
+    /// <summary>
+    /// Handles a disconnection by updating status and notifying the UI.
+    /// </summary>
+    /// <param name="reason">The reason for disconnection.</param>
+    private void HandleDisconnect(string reason)
+    {
+        if (Status == ConnectionStatus.Disconnected) return;
+
+        Status = ConnectionStatus.Disconnected;
+        Log(reason);
+        OnStatusChanged?.Invoke();
     }
 
     /// <summary>
