@@ -221,6 +221,10 @@ public sealed partial class MainView : Toplevel
         return themes.Select(kvp => new MenuItem(kvp.Key, "", () => ApplyTheme(kvp.Value))).ToArray();
     }
 
+    /// <summary>
+    /// Applies the specified <see cref="ColorScheme"/> to the current view and all its subviews, ensuring that the layout reflects the changes.
+    /// </summary>
+    /// <param name="scheme">The color scheme to apply to the UI components.</param>
     private void ApplyTheme(ColorScheme scheme)
     {
         ColorScheme = scheme;
