@@ -31,7 +31,7 @@ public sealed partial class MainView
         }
 
         var dataLabel = new Label { Text = "Data (Hex/Base64/ASCII):", X = 1, Y = 1 };
-        var dataField = new TextField { Text = "", X = 1, Y = 2, Width = Dim.Fill() - 2 };
+        var dataField = new TextField { Text = "", X = 1, Y = 2, Width = Dim.Fill()! - 2 };
         
         var encodingLabel = new Label { Text = "Encoding:", X = 1, Y = 4 };
         var encodingGroup = new RadioGroup 

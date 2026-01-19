@@ -20,7 +20,7 @@ public sealed partial class MainView
         var portField = new TextField { Text = "", X = Pos.Right(label), Y = 1, Width = 20 };
         
         var autoTxLabel = new Label { Text = "Auto Transactions (one per line):", X = 1, Y = 3 };
-        var autoTxField = new TextView { X = 1, Y = 4, Width = Dim.Fill() - 2, Height = 5 };
+        var autoTxField = new TextView { X = 1, Y = 4, Width = Dim.Fill()! - 2, Height = 5 };
 
         var loadFileBtn = new Button { Text = "Load from File", X = 1, Y = 9 };
         loadFileBtn.Accepting += (s, e) => {
@@ -95,7 +95,7 @@ public sealed partial class MainView
         var portField = new TextField { Text = "", X = Pos.Right(portLabel), Y = 3, Width = 10 };
 
         var autoTxLabel = new Label { Text = "Auto Transactions (one per line):", X = 1, Y = 5 };
-        var autoTxField = new TextView { X = 1, Y = 6, Width = Dim.Fill() - 2, Height = 5 };
+        var autoTxField = new TextView { X = 1, Y = 6, Width = Dim.Fill()! - 2, Height = 5 };
 
         var loadFileBtn = new Button { Text = "Load from File", X = 1, Y = 11 };
         loadFileBtn.Accepting += (s, e) => {
