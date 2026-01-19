@@ -20,6 +20,13 @@ public sealed partial class MainView : Toplevel
     private ObservableCollection<string> _logs = new();
     private TcpInstance? _selectedInstance;
 
+    private static readonly ColorScheme GreenScreen = new ColorScheme {
+        Normal = new Attribute(Color.Green, Color.Black),
+        Focus = new Attribute(Color.Black, Color.Green),
+        HotNormal = new Attribute(Color.BrightGreen, Color.Black),
+        HotFocus = new Attribute(Color.BrightGreen, Color.Green)
+    };
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MainView"/> class and sets up the UI components.
     /// </summary>
@@ -88,8 +95,8 @@ public sealed partial class MainView : Toplevel
 
         Add(_menu, topHalf, detailsFrame, bottomHalf);
 
-        // Ensure subviews use the initial color scheme
-        ColorScheme = Colors.ColorSchemes["Base"];
+        // Set the default theme to Green Screen
+        ColorScheme = GreenScreen;
         foreach (var view in Subviews)
         {
             view.ColorScheme = ColorScheme;
@@ -114,18 +121,13 @@ public sealed partial class MainView : Toplevel
     private MenuItem[] CreateThemeMenuItems()
     {
         var themes = new Dictionary<string, ColorScheme> {
-            { "Blue (Default)", new ColorScheme {
+            { "Blue", new ColorScheme {
                 Normal = new Attribute(Color.Gray, Color.Blue),
                 Focus = new Attribute(Color.White, Color.DarkGray),
                 HotNormal = new Attribute(Color.BrightCyan, Color.Blue),
                 HotFocus = new Attribute(Color.BrightCyan, Color.DarkGray)
             }},
-            { "Green Screen", new ColorScheme {
-                Normal = new Attribute(Color.Green, Color.Black),
-                Focus = new Attribute(Color.Black, Color.Green),
-                HotNormal = new Attribute(Color.BrightGreen, Color.Black),
-                HotFocus = new Attribute(Color.BrightGreen, Color.Green)
-            }},
+            { "Green Screen (Default)", GreenScreen },
             { "Orange Screen", new ColorScheme {
                 Normal = new Attribute(Color.Black, Color.BrightYellow),
                 Focus = new Attribute(Color.White, Color.Black),

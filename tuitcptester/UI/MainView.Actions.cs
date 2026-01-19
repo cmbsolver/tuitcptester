@@ -131,13 +131,17 @@ public sealed partial class MainView
         }
 
         var config = _selectedInstance.Config;
+        var autoTxInfo = config.AutoTransactions.Any() 
+            ? $"\nAuto-Tx: {config.AutoTransactions.Count} items, Interval: {config.IntervalMs?.ToString() ?? "On Receive"}, Next: {_selectedInstance.AutoTxIndex}" 
+            : "";
+            
         _detailsView.Text = $"""
                              Name: {config.Name}
                              Type: {config.Type}
                              Host: {config.Host}
                              Port: {config.Port}
                              Status: {_selectedInstance.Status}
-                             Error: {_selectedInstance.LastError ?? "None"}
+                             Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}
                              """;
     }
 }

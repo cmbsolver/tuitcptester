@@ -212,12 +212,19 @@ public class TcpInstance : IDisposable
     }
 
     /// <summary>
+    /// Gets the current index in the auto-transaction list.
+    /// </summary>
+    public int AutoTxIndex { get; private set; } = 0;
+
+    /// <summary>
     /// Handles bidirectional communication on an established stream.
     /// </summary>
     /// <param name="stream">The network stream to communicate on.</param>
     /// <param name="token">Cancellation token to stop communication.</param>
     private void HandleCommunication(NetworkStream stream, CancellationToken token)
     {
+        AutoTxIndex = 0;
+
         // Start auto-transactions if configured
         if (Config.AutoTransactions.Any())
         {
@@ -227,27 +234,35 @@ public class TcpInstance : IDisposable
         byte[] buffer = new byte[4096];
         while (!token.IsCancellationRequested)
         {
-            if (stream.DataAvailable)
+            try
             {
-                int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                if (bytesRead == 0)
+                if (stream.DataAvailable)
                 {
-                    HandleDisconnect("Server closed the connection.");
-                    break;
-                }
+                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                    if (bytesRead == 0)
+                    {
+                        HandleDisconnect("Remote closed the connection.");
+                        break;
+                    }
 
-                string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                Log($"Received: {received}");
+                    string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                    Log($"Received: {received}");
 
-                // If no interval is selected, send next transaction on receive
-                if (Config.IntervalMs == null && Config.AutoTransactions.Any())
-                {
-                    // This logic is a bit simplified, usually you'd want a stateful transaction list
-                    // but according to requirements: "If the wait time is not selected, then when 
-                    // the instance receives a transaction, then it will send the next item in the transaction list."
-                    // For simplicity, we'll just send the first one or cycle them if we had an index.
-                    SendManual(Config.AutoTransactions.First(), stream);
+                    // If no interval is selected, send next transaction on receive
+                    if (Config.IntervalMs == null && Config.AutoTransactions.Any())
+                    {
+                        if (AutoTxIndex < Config.AutoTransactions.Count)
+                        {
+                            SendManual(Config.AutoTransactions[AutoTxIndex], stream);
+                            AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
+                        }
+                    }
                 }
+            }
+            catch (Exception ex) when (!token.IsCancellationRequested)
+            {
+                HandleDisconnect($"Communication error: {ex.Message}");
+                break;
             }
             Thread.Sleep(100);
         }
@@ -273,7 +288,13 @@ public class TcpInstance : IDisposable
     /// <param name="token">Cancellation token to stop auto transactions.</param>
     private async Task RunAutoTransactions(NetworkStream stream, CancellationToken token)
     {
-        int index = 0;
+        // Send first item immediately on connection
+        if (Config.AutoTransactions.Any())
+        {
+            SendManual(Config.AutoTransactions[AutoTxIndex], stream);
+            AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
+        }
+
         while (!token.IsCancellationRequested)
         {
             if (Config.IntervalMs.HasValue)
@@ -281,21 +302,32 @@ public class TcpInstance : IDisposable
                 int delay = Config.IntervalMs.Value;
                 if (Config.JitterMinMs.HasValue && Config.JitterMaxMs.HasValue)
                 {
+                    // Requirements: "The jitter is a random number with a min/max that it will subtract from the time between transaction."
                     delay -= _random.Next(Config.JitterMinMs.Value, Config.JitterMaxMs.Value + 1);
                 }
                 
                 if (delay > 0)
-                    await Task.Delay(delay, token);
-
-                if (index < Config.AutoTransactions.Count)
                 {
-                    SendManual(Config.AutoTransactions[index], stream);
-                    index = (index + 1) % Config.AutoTransactions.Count;
+                    try
+                    {
+                        await Task.Delay(delay, token);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        break;
+                    }
+                }
+
+                if (Config.AutoTransactions.Any())
+                {
+                    SendManual(Config.AutoTransactions[AutoTxIndex], stream);
+                    AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
                 }
             }
             else
             {
                 // Wait for signal from receiver (handled in HandleCommunication)
+                // We just loop here, but the actual sending is triggered in HandleCommunication when DataAvailable is true.
                 await Task.Delay(100, token);
             }
         }
