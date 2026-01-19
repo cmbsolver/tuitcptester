@@ -138,7 +138,7 @@ public sealed partial class MainView
                     Port = port 
                 };
                 
-                var lines = autoTxField.Text.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var lines = autoTxField.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (var line in lines)
                 {
                     config.AutoTransactions.Add(new Transaction { Data = line, Encoding = TransactionEncoding.Ascii });

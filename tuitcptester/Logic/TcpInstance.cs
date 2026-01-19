@@ -117,7 +117,7 @@ public class TcpInstance : IDisposable
             else
             {
                 _client = new TcpClient();
-                // Synchronous connect for the initial attempt so we can catch errors early
+                // Synchronously connect for the initial attempt so we can catch errors early
                 _client.Connect(Config.Host, Config.Port);
                 Status = ConnectionStatus.Connected;
             }
@@ -214,7 +214,7 @@ public class TcpInstance : IDisposable
     /// <summary>
     /// Gets the current index in the auto-transaction list.
     /// </summary>
-    public int AutoTxIndex { get; private set; } = 0;
+    public int AutoTxIndex { get; private set; }
 
     /// <summary>
     /// Handles bidirectional communication on an established stream.
@@ -288,7 +288,7 @@ public class TcpInstance : IDisposable
     /// <param name="token">Cancellation token to stop auto transactions.</param>
     private async Task RunAutoTransactions(NetworkStream stream, CancellationToken token)
     {
-        // Send first item immediately on connection
+        // Send the first item immediately on connection
         if (Config.AutoTransactions.Any())
         {
             SendManual(Config.AutoTransactions[AutoTxIndex], stream);
@@ -299,8 +299,8 @@ public class TcpInstance : IDisposable
         {
             if (Config.IntervalMs.HasValue)
             {
-                int delay = Config.IntervalMs.Value;
-                if (Config.JitterMinMs.HasValue && Config.JitterMaxMs.HasValue)
+                var delay = Config.IntervalMs.Value;
+                if (Config is { JitterMinMs: not null, JitterMaxMs: not null })
                 {
                     // Requirements: "The jitter is a random number with a min/max that it will subtract from the time between transaction."
                     delay -= _random.Next(Config.JitterMinMs.Value, Config.JitterMaxMs.Value + 1);
@@ -318,11 +318,9 @@ public class TcpInstance : IDisposable
                     }
                 }
 
-                if (Config.AutoTransactions.Any())
-                {
-                    SendManual(Config.AutoTransactions[AutoTxIndex], stream);
-                    AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
-                }
+                if (Config.AutoTransactions.Count == 0) continue;
+                SendManual(Config.AutoTransactions[AutoTxIndex], stream);
+                AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
             }
             else
             {
@@ -339,7 +337,7 @@ public class TcpInstance : IDisposable
     /// <param name="tx">The transaction to send.</param>
     public void SendManual(Transaction tx)
     {
-        if (_client != null && _client.Connected)
+        if (_client is { Connected: true })
         {
             SendManual(tx, _client.GetStream());
         }
@@ -358,11 +356,11 @@ public class TcpInstance : IDisposable
     {
         try
         {
-            string dataToSend = tx.Data;
+            var dataToSend = tx.Data;
             if (tx.AppendReturn) dataToSend += "\r";
             if (tx.AppendNewline) dataToSend += "\n";
 
-            byte[] data = tx.Encoding switch
+            var data = tx.Encoding switch
             {
                 TransactionEncoding.Ascii => Encoding.ASCII.GetBytes(dataToSend),
                 TransactionEncoding.Hex => HexToBytes(dataToSend),
@@ -387,8 +385,8 @@ public class TcpInstance : IDisposable
     private byte[] HexToBytes(string hex)
     {
         hex = hex.Replace("-", "").Replace(" ", "");
-        byte[] bytes = new byte[hex.Length / 2];
-        for (int i = 0; i < hex.Length; i += 2)
+        var bytes = new byte[hex.Length / 2];
+        for (var i = 0; i < hex.Length; i += 2)
             bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
         return bytes;
     }

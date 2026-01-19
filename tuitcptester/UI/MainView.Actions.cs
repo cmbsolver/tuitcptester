@@ -90,8 +90,7 @@ public sealed partial class MainView
     /// </summary>
     private void OnStopConnection()
     {
-        if (_selectedInstance == null) return;
-        _selectedInstance.Stop();
+        _selectedInstance?.Stop();
     }
 
     /// <summary>
