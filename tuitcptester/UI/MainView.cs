@@ -192,10 +192,28 @@ public sealed partial class MainView : Toplevel
             {
                 "Midnight", new ColorScheme
                 {
-                    Normal = new Attribute(Color.BrightBlue, Color.DarkGray),
-                    Focus = new Attribute(Color.White, Color.Blue),
-                    HotNormal = new Attribute(Color.Cyan, Color.DarkGray),
-                    HotFocus = new Attribute(Color.Cyan, Color.Blue)
+                    Normal = new Attribute(Color.White, Color.Blue),
+                    Focus = new Attribute(Color.Blue, Color.BrightCyan),
+                    HotNormal = new Attribute(Color.BrightCyan, Color.Blue),
+                    HotFocus = new Attribute(Color.White, Color.BrightCyan)
+                }
+            },
+            {
+                "Matrix", new ColorScheme
+                {
+                    Normal = new Attribute(Color.BrightGreen, Color.Black),
+                    Focus = new Attribute(Color.Black, Color.Green),
+                    HotNormal = new Attribute(Color.Green, Color.Black),
+                    HotFocus = new Attribute(Color.BrightGreen, Color.Green)
+                }
+            },
+            {
+                "Solarized Dark", new ColorScheme
+                {
+                    Normal = new Attribute(Color.Gray, Color.Black),
+                    Focus = new Attribute(Color.White, Color.DarkGray),
+                    HotNormal = new Attribute(Color.BrightYellow, Color.Black),
+                    HotFocus = new Attribute(Color.BrightYellow, Color.DarkGray)
                 }
             }
         };
