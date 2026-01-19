@@ -1,8 +1,6 @@
 using Terminal.Gui;
 using tuitcptester.Logic;
-using tuitcptester.Models;
 using System.Collections.ObjectModel;
-using System.Text.Json;
 using Attribute = Terminal.Gui.Attribute;
 
 namespace tuitcptester.UI;
