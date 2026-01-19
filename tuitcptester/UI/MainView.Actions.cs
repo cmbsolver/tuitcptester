@@ -43,7 +43,7 @@ public sealed partial class MainView
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 8 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 9 };
         
-        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 14, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 16, ColorScheme = ColorScheme };
         dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox);
 
         var sendBtn = new Button { Text = "Send", IsDefault = true };
