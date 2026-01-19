@@ -98,7 +98,7 @@ public sealed partial class MainView
     /// </summary>
     private void OnPing()
     {
-        var hostField = new TextField { Text = "127.0.0.1", Width = 30 };
+        var hostField = new TextField { Text = "127.0.0.1", X = 13, Y = 1, Width = 30 };
         var dialog = new Dialog { Title = "Ping IP", Width = 50, Height = 10, ColorScheme = ColorScheme };
         dialog.Add(new Label { Text = "IP Address:", X = 1, Y = 1 }, hostField);
         
