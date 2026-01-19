@@ -6,50 +6,6 @@ using tuitcptester.Models;
 namespace tuitcptester.Logic;
 
 /// <summary>
-/// Represents the current status of a TCP connection.
-/// </summary>
-public enum ConnectionStatus
-{
-    /// <summary>
-    /// Not connected or listening.
-    /// </summary>
-    Disconnected,
-    /// <summary>
-    /// Successfully connected as a client.
-    /// </summary>
-    Connected,
-    /// <summary>
-    /// Successfully listening as a server.
-    /// </summary>
-    Listening,
-    /// <summary>
-    /// An error occurred during the connection or operation.
-    /// </summary>
-    Error
-}
-
-/// <summary>
-/// Represents a log message with metadata.
-/// </summary>
-public class LogEntry
-{
-    /// <summary>
-    /// Gets or sets the time when the log entry was created.
-    /// </summary>
-    public DateTime Timestamp { get; set; }
-
-    /// <summary>
-    /// Gets or sets the log message content.
-    /// </summary>
-    public string Message { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the name of the connection that generated this log.
-    /// </summary>
-    public string ConnectionName { get; set; } = string.Empty;
-}
-
-/// <summary>
 /// Manages a TCP connection instance, supporting both client and server roles.
 /// </summary>
 public class TcpInstance : IDisposable

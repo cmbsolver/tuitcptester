@@ -1,66 +1,6 @@
 namespace tuitcptester.Models;
 
 /// <summary>
-/// Specifies the type of TCP connection.
-/// </summary>
-public enum ConnectionType
-{
-    /// <summary>
-    /// Acts as a TCP server.
-    /// </summary>
-    Server,
-    /// <summary>
-    /// Acts as a TCP client.
-    /// </summary>
-    Client
-}
-
-/// <summary>
-/// Specifies the encoding used for transactions.
-/// </summary>
-public enum TransactionEncoding
-{
-    /// <summary>
-    /// Plain text ASCII encoding.
-    /// </summary>
-    Ascii,
-    /// <summary>
-    /// Hexadecimal string representation.
-    /// </summary>
-    Hex,
-    /// <summary>
-    /// Binary data (typically represented as Base64 in config).
-    /// </summary>
-    Binary
-}
-
-/// <summary>
-/// Represents a single data transaction.
-/// </summary>
-public class Transaction
-{
-    /// <summary>
-    /// Gets or sets the data to be sent.
-    /// </summary>
-    public string Data { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the encoding used for the data.
-    /// </summary>
-    public TransactionEncoding Encoding { get; set; } = TransactionEncoding.Ascii;
-
-    /// <summary>
-    /// Gets or sets whether to append a carriage return (\r) to the data.
-    /// </summary>
-    public bool AppendReturn { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether to append a newline (\n) to the data.
-    /// </summary>
-    public bool AppendNewline { get; set; }
-}
-
-/// <summary>
 /// Configuration settings for a TCP connection.
 /// </summary>
 public class TcpConfiguration
@@ -104,15 +44,4 @@ public class TcpConfiguration
     /// Gets or sets the maximum jitter in milliseconds for randomized intervals.
     /// </summary>
     public int? JitterMaxMs { get; set; }
-}
-
-/// <summary>
-/// Represents the root application configuration.
-/// </summary>
-public class AppConfig
-{
-    /// <summary>
-    /// Gets or sets the list of configured TCP connections.
-    /// </summary>
-    public List<TcpConfiguration> Connections { get; init; } = new();
 }
