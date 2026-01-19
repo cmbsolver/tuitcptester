@@ -40,8 +40,8 @@ public sealed partial class MainView
             RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
         };
 
-        var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 7 };
-        var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 8 };
+        var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 8 };
+        var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 9 };
         
         var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 14, ColorScheme = ColorScheme };
         dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox);
