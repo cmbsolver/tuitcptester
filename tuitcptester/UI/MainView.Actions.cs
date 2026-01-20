@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Terminal.Gui;
 using tuitcptester.Logic;
 using tuitcptester.Models;
@@ -64,6 +65,42 @@ public sealed partial class MainView
         
         dialog.AddButton(sendBtn);
         dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+    /// <summary>
+    /// Displays a dialog listing all IP addresses for the machine.
+    /// </summary>
+    private void OnListIPs()
+    {
+        var tmpAddresses = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+            .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
+            .Select(ua => $"{ua.Address} ({ua.Address.AddressFamily})")
+            .ToList();
+        
+        ObservableCollection<string> ipAddresses = new ObservableCollection<string>(tmpAddresses);
+
+        if (!ipAddresses.Any())
+        {
+            ipAddresses.Add("No active IP addresses found.");
+        }
+
+        var dialog = new Dialog { Title = "Machine IP Addresses", Width = 60, Height = 12, ColorScheme = ColorScheme };
+        var list = new ListView
+        {
+            Source = new ListWrapper<string>(ipAddresses),
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill()! - 1
+        };
+        dialog.Add(list);
+
+        var okBtn = new Button { Text = "Ok", IsDefault = true };
+        okBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(okBtn);
+
         Application.Run(dialog);
     }
 
