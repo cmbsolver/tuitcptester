@@ -14,7 +14,8 @@ public sealed partial class MainView
     {
         if (!_instances.Any())
         {
-            MessageBox.ErrorQuery("Send Message", "No connections exist. Please create a server or client first.", "Ok");
+            MessageBox.ErrorQuery("Send Message", "No connections exist. Please create a server or client first.",
+                "Ok");
             return;
         }
 
@@ -24,7 +25,7 @@ public sealed partial class MainView
             return;
         }
 
-        if (_selectedInstance.Status != ConnectionStatus.Connected && 
+        if (_selectedInstance.Status != ConnectionStatus.Connected &&
             _selectedInstance.Config.Type == ConnectionType.Client)
         {
             MessageBox.ErrorQuery("Send Message", "Client is not connected.", "Ok");
@@ -33,36 +34,38 @@ public sealed partial class MainView
 
         var dataLabel = new Label { Text = "Data (Hex/Base64/ASCII):", X = 1, Y = 1 };
         var dataField = new TextField { Text = "", X = 1, Y = 2, Width = Dim.Fill()! - 2 };
-        
+
         var encodingLabel = new Label { Text = "Encoding:", X = 1, Y = 4 };
-        var encodingGroup = new RadioGroup 
-        { 
+        var encodingGroup = new RadioGroup
+        {
             X = 1, Y = 5,
             RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
         };
 
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 8 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 9 };
-        
+
         var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 16, ColorScheme = ColorScheme };
         dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox);
 
         var sendBtn = new Button { Text = "Send", IsDefault = true };
-        sendBtn.Accepting += (s, e) => {
-            var tx = new Transaction {
+        sendBtn.Accepting += (s, e) =>
+        {
+            var tx = new Transaction
+            {
                 Data = dataField.Text,
                 Encoding = (TransactionEncoding)encodingGroup.SelectedItem,
                 AppendReturn = returnCheckbox.CheckedState == CheckState.Checked,
                 AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
             };
-            
+
             _selectedInstance.SendManual(tx);
             Application.RequestStop();
         };
-        
+
         var cancelBtn = new Button { Text = "Cancel" };
         cancelBtn.Accepting += (s, e) => Application.RequestStop();
-        
+
         dialog.AddButton(sendBtn);
         dialog.AddButton(cancelBtn);
         Application.Run(dialog);
@@ -78,7 +81,7 @@ public sealed partial class MainView
             .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
             .Select(ua => $"{ua.Address} ({ua.Address.AddressFamily})")
             .ToList();
-        
+
         ObservableCollection<string> ipAddresses = new ObservableCollection<string>(tmpAddresses);
 
         if (!ipAddresses.Any())
@@ -110,7 +113,8 @@ public sealed partial class MainView
     private void OnStartConnection()
     {
         if (_selectedInstance == null) return;
-        if (_selectedInstance.Status != ConnectionStatus.Disconnected && _selectedInstance.Status != ConnectionStatus.Error) return;
+        if (_selectedInstance.Status != ConnectionStatus.Disconnected &&
+            _selectedInstance.Status != ConnectionStatus.Error) return;
 
         try
         {
@@ -138,16 +142,22 @@ public sealed partial class MainView
         var hostField = new TextField { Text = "127.0.0.1", X = 13, Y = 1, Width = 30 };
         var dialog = new Dialog { Title = "Ping IP", Width = 50, Height = 10, ColorScheme = ColorScheme };
         dialog.Add(new Label { Text = "IP Address:", X = 1, Y = 1 }, hostField);
-        
+
         var pingBtn = new Button { Text = "Ping", IsDefault = true };
-        pingBtn.Accepting += (s, e) => {
+        pingBtn.Accepting += (s, e) =>
+        {
             string host = hostField.Text;
-            Task.Run(() => {
-                try {
+            Task.Run(() =>
+            {
+                try
+                {
                     var ping = new System.Net.NetworkInformation.Ping();
                     var reply = ping.Send(host);
-                    Application.Invoke(() => MessageBox.Query("Ping Result", $"Status: {reply.Status}\nTime: {reply.RoundtripTime}ms", "Ok"));
-                } catch (Exception ex) {
+                    Application.Invoke(() => MessageBox.Query("Ping Result",
+                        $"Status: {reply.Status}\nTime: {reply.RoundtripTime}ms", "Ok"));
+                }
+                catch (Exception ex)
+                {
                     Application.Invoke(() => MessageBox.ErrorQuery("Ping Error", ex.Message, "Ok"));
                 }
             });
@@ -159,7 +169,7 @@ public sealed partial class MainView
         dialog.AddButton(cancelBtn);
         Application.Run(dialog);
     }
-    
+
     /// <summary>
     /// Updates the details view with information about the currently selected connection.
     /// </summary>
@@ -172,10 +182,10 @@ public sealed partial class MainView
         }
 
         var config = _selectedInstance.Config;
-        var autoTxInfo = config.AutoTransactions.Any() 
-            ? $"\nAuto-Tx: {config.AutoTransactions.Count} items, Interval: {config.IntervalMs?.ToString() ?? "On Receive"}, Next: {_selectedInstance.AutoTxIndex}" 
+        var autoTxInfo = config.AutoTransactions.Any()
+            ? $"\nAuto-Tx: {config.AutoTransactions.Count} items, Interval: {config.IntervalMs?.ToString() ?? "On Receive"}, Next: {_selectedInstance.AutoTxIndex}"
             : "";
-            
+
         _detailsView.Text = $"""
                              Name: {config.Name}
                              Type: {config.Type}
@@ -192,5 +202,41 @@ public sealed partial class MainView
     private void OnClearLogs()
     {
         _logs.Clear();
+    }
+
+    /// <summary>
+    /// Displays an about dialog with project information.
+    /// </summary>
+    private void OnAbout()
+    {
+        var dialog = new Dialog { Title = "About TUI TCP Tester", Width = 60, Height = 10, ColorScheme = ColorScheme };
+
+        var blurb = new Label
+        {
+            Text = "A terminal-based TCP testing tool for developers.\nQuickly test server and client connections.",
+            X = Pos.Center(),
+            Y = 1,
+            TextAlignment = Alignment.Center
+        };
+
+        if (ColorScheme != null)
+        {
+            var link = new Label
+            {
+                Text = "https://github.com/cmbsolver/tuitcptester",
+                X = Pos.Center(),
+                Y = 4,
+                ColorScheme = new ColorScheme
+                    { Normal = new Terminal.Gui.Attribute(Color.BrightBlue, ColorScheme.Normal.Background) }
+            };
+
+            dialog.Add(blurb, link);
+        }
+
+        var okBtn = new Button { Text = "Ok", IsDefault = true };
+        okBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(okBtn);
+
+        Application.Run(dialog);
     }
 }

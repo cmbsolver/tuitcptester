@@ -61,7 +61,11 @@ public sealed partial class MainView : Toplevel
                     new("_Ping", "F8", OnPing),
                     new("_List IP Addresses", "", OnListIPs),
                 }),
-                new MenuBarItem("T_hemes", CreateThemeMenuItems())
+                new MenuBarItem("T_hemes", CreateThemeMenuItems()),
+                new MenuBarItem("_Help", new MenuItem[]
+                {
+                    new("_About", "", OnAbout)
+                })
             ]
         };
 
