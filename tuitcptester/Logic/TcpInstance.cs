@@ -147,6 +147,8 @@ public class TcpInstance : IDisposable
                     var client = _listener.AcceptTcpClient();
                     Log($"Accepted connection from {client.Client.RemoteEndPoint}");
 
+                    // Store the accepted client so SendManual can use it
+                    _client = client;
                     Status = ConnectionStatus.Connected;
                     OnStatusChanged?.Invoke();
 
