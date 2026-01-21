@@ -45,11 +45,29 @@ public sealed partial class MainView
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 8 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 9 };
 
+        var hintLabel = new Label { Text = "Press ESC to Cancel", X = 1, Y = 11, ColorScheme = ColorScheme };
+
         var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 16, ColorScheme = ColorScheme };
-        dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox);
+        dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox, hintLabel);
 
         var sendBtn = new Button { Text = "Send", IsDefault = true };
+
+        bool sendClicked = false;
+
         sendBtn.Accepting += (s, e) =>
+        {
+            sendClicked = true;
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(sendBtn);
+
+        // Run the dialog modally
+        Application.Run(dialog);
+
+        // If the user closed the dialog via Escape or the Cancel button, 
+        // sendClicked will be false.
+        if (sendClicked)
         {
             var tx = new Transaction
             {
@@ -60,15 +78,7 @@ public sealed partial class MainView
             };
 
             _selectedInstance.SendManual(tx);
-            Application.RequestStop();
-        };
-
-        var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
-
-        dialog.AddButton(sendBtn);
-        dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        }
     }
 
     /// <summary>
@@ -205,7 +215,7 @@ public sealed partial class MainView
     }
 
     /// <summary>
-    /// Displays an about dialog with project information.
+    /// Displays an "about" dialog with project information.
     /// </summary>
     private void OnAbout()
     {
