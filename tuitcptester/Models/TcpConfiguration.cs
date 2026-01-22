@@ -44,4 +44,9 @@ public class TcpConfiguration
     /// Gets or sets the maximum jitter in milliseconds for randomized intervals.
     /// </summary>
     public int? JitterMaxMs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the path to a file where all communication should be dumped.
+    /// </summary>
+    public string? DumpFilePath { get; set; }
 }

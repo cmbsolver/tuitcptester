@@ -13,7 +13,7 @@ public sealed partial class MainView
     {
         var dialog = new Dialog {
             Title = "New TCP Server",
-            Width = 60, Height = 19,
+            Width = 60, Height = 21,
             ColorScheme = ColorScheme
         };
         var label = new Label { Text = "Port: ", X = 1, Y = 1 };
@@ -45,7 +45,18 @@ public sealed partial class MainView
         var jitterMinField = new TextField { X = Pos.Right(jitterLabel) + 1, Y = 12, Width = 8 };
         var jitterMaxField = new TextField { X = Pos.Right(jitterMinField) + 1, Y = 12, Width = 8 };
 
-        dialog.Add(label, portField, autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField);
+        var dumpLabel = new Label { Text = "Dump to File:", X = 1, Y = 14 };
+        var dumpField = new TextField { X = 1, Y = 15, Width = Dim.Fill()! - 12 };
+        var dumpBrowseBtn = new Button { Text = "Browse", X = Pos.Right(dumpField) + 1, Y = 15 };
+        dumpBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Dump File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                dumpField.Text = saveDialog.Path.ToString();
+            }
+        };
+
+        dialog.Add(label, portField, autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField, dumpLabel, dumpField, dumpBrowseBtn);
         
         var startBtn = new Button { Text = "Start", IsDefault = true };
         startBtn.Accepting += (s, e) =>
@@ -62,6 +73,7 @@ public sealed partial class MainView
             if (int.TryParse(intervalField.Text, out int interval)) config.IntervalMs = interval;
             if (int.TryParse(jitterMinField.Text, out int jMin)) config.JitterMinMs = jMin;
             if (int.TryParse(jitterMaxField.Text, out int jMax)) config.JitterMaxMs = jMax;
+            config.DumpFilePath = dumpField.Text.ToString();
 
             var instance = new TcpInstance(config);
             try 
@@ -120,12 +132,23 @@ public sealed partial class MainView
         var jitterMinField = new TextField { X = Pos.Right(jitterLabel) + 1, Y = 14, Width = 8 };
         var jitterMaxField = new TextField { X = Pos.Right(jitterMinField) + 1, Y = 14, Width = 8 };
 
+        var dumpLabel = new Label { Text = "Dump to File:", X = 1, Y = 16 };
+        var dumpField = new TextField { X = 1, Y = 17, Width = Dim.Fill()! - 12 };
+        var dumpBrowseBtn = new Button { Text = "Browse", X = Pos.Right(dumpField) + 1, Y = 17 };
+        dumpBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Dump File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                dumpField.Text = saveDialog.Path.ToString();
+            }
+        };
+
         var dialog = new Dialog {
             Title = "New TCP Client",
-            Width = 60, Height = 21,
+            Width = 60, Height = 23,
             ColorScheme = ColorScheme
         };
-        dialog.Add(hostLabel, hostField, portLabel, portField, autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField);
+        dialog.Add(hostLabel, hostField, portLabel, portField, autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField, dumpLabel, dumpField, dumpBrowseBtn);
 
         var startBtn = new Button { Text = "Start", IsDefault = true };
         startBtn.Accepting += (s, e) => {
@@ -147,6 +170,7 @@ public sealed partial class MainView
                 if (int.TryParse(intervalField.Text, out int interval)) config.IntervalMs = interval;
                 if (int.TryParse(jitterMinField.Text, out int jMin)) config.JitterMinMs = jMin;
                 if (int.TryParse(jitterMaxField.Text, out int jMax)) config.JitterMaxMs = jMax;
+                config.DumpFilePath = dumpField.Text.ToString();
 
                 var instance = new TcpInstance(config);
                 // We'll wrap the start in a try-catch. 

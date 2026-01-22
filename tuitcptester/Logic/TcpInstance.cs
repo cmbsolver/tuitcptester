@@ -355,9 +355,30 @@ public class TcpInstance : IDisposable
     /// <param name="message">The message to log.</param>
     private void Log(string message)
     {
+        var timestamp = DateTime.Now;
+        
+        if (!string.IsNullOrWhiteSpace(Config.DumpFilePath))
+        {
+            try
+            {
+                File.AppendAllText(Config.DumpFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+            }
+            catch (Exception ex)
+            {
+                // We don't want to crash the connection thread if file writing fails, 
+                // but we should at least let the user know via the UI log.
+                OnLog?.Invoke(new LogEntry
+                {
+                    Timestamp = timestamp,
+                    Message = $"Dump Error: {ex.Message}",
+                    ConnectionName = Config.Name
+                });
+            }
+        }
+
         OnLog?.Invoke(new LogEntry
         {
-            Timestamp = DateTime.Now,
+            Timestamp = timestamp,
             Message = message,
             ConnectionName = Config.Name
         });

@@ -29,30 +29,31 @@ do
     echo "---------------------------------------"
     echo "Building for $RID..."
     
-    OUTPUT_FOLDER="$PUBLISH_DIR/$RID"
+    # Create a temporary output folder
+    TEMP_OUTPUT="$PUBLISH_DIR/temp_$RID"
+    # The folder name we want inside the archive
+    INTERNAL_DIR="tcptui"
+    FINAL_OUTPUT="$TEMP_OUTPUT/$INTERNAL_DIR"
     
-    # Publish command:
-    # -c Release: Optimized build
-    # -r $RID: Target runtime
-    # --self-contained true: Includes .NET runtime
+    # Publish command
     dotnet publish -c Release -r $RID --self-contained true \
-        -o "$OUTPUT_FOLDER"
+        -o "$FINAL_OUTPUT"
 
     # Compress the output
-    cd $PUBLISH_DIR
+    cd "$TEMP_OUTPUT"
     if [[ $RID == win* ]]; then
-        zip -j "${APP_NAME}-${RID}-v${VERSION}.zip" "$RID/"*
+        zip -r "../../$PUBLISH_DIR/${APP_NAME}-${RID}-v${VERSION}.zip" "$INTERNAL_DIR"
     else
-        tar -czf "${APP_NAME}-${RID}-v${VERSION}.tar.gz" -C "$RID" .
+        tar -czf "../../$PUBLISH_DIR/${APP_NAME}-${RID}-v${VERSION}.tar.gz" "$INTERNAL_DIR"
     fi
-    cd ..
+    cd ../..
 
     echo "Done: $RID"
 done
 
-# Clean up the subdirectories, leaving only the compressed artifacts
+# Clean up the temporary folders
 echo "Cleaning up temporary build directories..."
-find "$PUBLISH_DIR" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+rm -rf "$PUBLISH_DIR"/temp_*
 
 echo "---------------------------------------"
 echo "Build complete! Artifacts are in the $PUBLISH_DIR directory."

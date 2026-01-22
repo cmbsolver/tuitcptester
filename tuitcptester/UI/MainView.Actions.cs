@@ -195,6 +195,7 @@ public sealed partial class MainView
         var autoTxInfo = config.AutoTransactions.Any()
             ? $"\nAuto-Tx: {config.AutoTransactions.Count} items, Interval: {config.IntervalMs?.ToString() ?? "On Receive"}, Next: {_selectedInstance.AutoTxIndex}"
             : "";
+        var dumpInfo = !string.IsNullOrEmpty(config.DumpFilePath) ? $"\nDump File: {config.DumpFilePath}" : "";
 
         _detailsView.Text = $"""
                              Name: {config.Name}
@@ -202,7 +203,7 @@ public sealed partial class MainView
                              Host: {config.Host}
                              Port: {config.Port}
                              Status: {_selectedInstance.Status}
-                             Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}
+                             Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}{dumpInfo}
                              """;
     }
 
