@@ -334,7 +334,7 @@ public sealed partial class MainView
     {
         var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
         var portField = new TextField { Text = "80", X = 15, Y = 2, Width = 10 };
-        var hexField = new TextField { Text = "48454c4c4f", X = 15, Y = 3, Width = Dim.Fill() - 2 };
+        var hexField = new TextField { Text = "48454c4c4f", X = 15, Y = 3, Width = Dim.Fill()! - 2 };
         var iterationsField = new TextField { Text = "1", X = 15, Y = 4, Width = 10 };
         var delayField = new TextField { Text = "100", X = 15, Y = 5, Width = 10 };
 

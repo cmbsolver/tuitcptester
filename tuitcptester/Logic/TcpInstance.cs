@@ -221,7 +221,8 @@ public class TcpInstance : IDisposable
                     }
 
                     string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                    Log($"Received: {received}");
+                    string hex = DataUtils.ToHexString(buffer, 0, bytesRead);
+                    Log($"Received: {received} (Hex: {hex})");
 
                     // If no interval is selected, send next transaction on receive
                     if (Config.IntervalMs == null && Config.AutoTransactions.Any())
@@ -338,13 +339,14 @@ public class TcpInstance : IDisposable
             var data = tx.Encoding switch
             {
                 TransactionEncoding.Ascii => Encoding.ASCII.GetBytes(dataToSend),
-                TransactionEncoding.Hex => HexToBytes(dataToSend),
+                TransactionEncoding.Hex => DataUtils.HexToBytes(dataToSend),
                 TransactionEncoding.Binary => Convert.FromBase64String(dataToSend), // Assuming Base64 for binary input
                 _ => Encoding.ASCII.GetBytes(dataToSend)
             };
 
             stream.Write(data, 0, data.Length);
-            Log($"Sent ({tx.Encoding}): {dataToSend.Replace("\r", "\\r").Replace("\n", "\\n")}");
+            string hex = DataUtils.ToHexString(data);
+            Log($"Sent ({tx.Encoding}): {dataToSend.Replace("\r", "\\r").Replace("\n", "\\n")} (Hex: {hex})");
         }
         catch (Exception ex)
         {
@@ -352,24 +354,6 @@ public class TcpInstance : IDisposable
         }
     }
 
-    /// <summary>
-    /// Converts a hexadecimal string to a byte array.
-    /// </summary>
-    /// <param name="hex">The hex string to convert.</param>
-    /// <returns>A byte array representing the hex string.</returns>
-    /// <summary>
-    /// Converts a hexadecimal string to a byte array.
-    /// </summary>
-    /// <param name="hex">The hex string to convert.</param>
-    /// <returns>A byte array representing the hex data.</returns>
-    private byte[] HexToBytes(string hex)
-    {
-        hex = hex.Replace("-", "").Replace(" ", "");
-        var bytes = new byte[hex.Length / 2];
-        for (var i = 0; i < hex.Length; i += 2)
-            bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
-        return bytes;
-    }
 
     /// <summary>
     /// Invokes the <see cref="OnLog"/> event with the specified message.

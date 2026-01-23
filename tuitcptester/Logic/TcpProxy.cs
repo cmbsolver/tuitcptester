@@ -123,7 +123,8 @@ public class TcpProxy : IDisposable
             {
                 await destination.WriteAsync(buffer, 0, bytesRead, token);
                 string data = System.Text.Encoding.ASCII.GetString(buffer, 0, bytesRead).Replace("\r", "\\r").Replace("\n", "\\n");
-                Log($"{prefix} Forwarded {bytesRead} bytes: {data}");
+                string hex = DataUtils.ToHexString(buffer, 0, bytesRead);
+                Log($"{prefix} Forwarded {bytesRead} bytes: {data} (Hex: {hex})");
             }
         }
         catch (Exception)

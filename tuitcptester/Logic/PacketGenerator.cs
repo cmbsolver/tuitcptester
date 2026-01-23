@@ -23,7 +23,7 @@ public class PacketGenerator
         byte[] data;
         try
         {
-            data = HexToBytes(hexData);
+            data = DataUtils.HexToBytes(hexData);
         }
         catch (Exception ex)
         {
@@ -59,17 +59,4 @@ public class PacketGenerator
         }
     }
 
-    /// <summary>
-    /// Converts a hexadecimal string to a byte array.
-    /// </summary>
-    private static byte[] HexToBytes(string hex)
-    {
-        hex = hex.Replace("-", "").Replace(" ", "").Replace("\n", "").Replace("\r", "");
-        if (hex.Length % 2 != 0) throw new ArgumentException("Hex string must have an even length.");
-        
-        var bytes = new byte[hex.Length / 2];
-        for (var i = 0; i < hex.Length; i += 2)
-            bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
-        return bytes;
-    }
 }
