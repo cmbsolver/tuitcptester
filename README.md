@@ -5,6 +5,7 @@ A terminal-based utility for testing TCP connections, supporting both client and
 ## Features
 
 - **Server & Client Modes**: Easily set up a listening TCP server or a connecting TCP client.
+- **TCP Proxy / Port Forwarder**: Listen on a local port and forward all traffic to a remote host and port, with bi-directional logging.
 - **Auto-Transactions**: 
     - Load a list of messages to be sent automatically upon connection.
     - Support for periodic sending (Interval in ms).
@@ -13,9 +14,17 @@ A terminal-based utility for testing TCP connections, supporting both client and
 - **Manual Messaging**: Send custom data in ASCII, Hex, or Binary (Base64) formats.
 - **Control Characters**: Option to append `\r` (Return) and/or `\n` (Newline) to outgoing messages.
 - **File Integration**: Load transaction lists directly from text files.
-- **Logging**: Real-time logs of all sent and received data, with an option to clear them.
+- **Logging & Traffic Analysis**:
+    - Real-time logs of all sent and received data.
+    - **Hex & ASCII Logging**: All traffic is logged in both human-readable ASCII and raw Hex formats for easy debugging.
+    - **Dump to File**: Option to record all communication for a specific connection to a local file.
+- **Tools**:
+    - **Ping Tool**: Built-in utility to check network reachability.
+    - **Port Scanner**: Scan a range of ports on a target host to identify open services.
+    - **Throughput Tester**: Measure maximum data transfer rates and test connection stability.
+    - **Packet Generator**: Send custom hex packets with configurable iterations and delays.
+    - **IP Address List**: Quickly view all active IP addresses on the machine.
 - **Themes**: Multiple UI color schemes including Green Screen (Default), Cyberpunk, Solarized Dark, and more.
-- **Ping Tool**: Built-in utility to check network reachability.
 - **Persistence**: Save and load connection configurations for quick reuse.
 
 ## Keyboard Shortcuts
@@ -24,13 +33,17 @@ A terminal-based utility for testing TCP connections, supporting both client and
 | --- | --- |
 | **F2** | New TCP Server |
 | **F3** | New TCP Client |
+| **F10** | New TCP Proxy |
 | **F4** | Stop Selected Connection |
 | **F5** | Start Selected Connection |
 | **F6** | Remove Selected Connection |
 | **F7** | Manual Send Message |
 | **F8** | Ping IP |
+| **Ctrl+P** | Port Scan |
+| **Ctrl+T** | Throughput Test |
+| **Ctrl+G** | Packet Generator |
 | **F9** | Clear Logs |
-| **Ctrl+Q**| Quit Application |
+| **Ctrl+Q** | Quit Application |
 
 ## Getting Started
 
