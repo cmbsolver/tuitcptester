@@ -161,6 +161,33 @@ public sealed partial class MainView : Toplevel
                 }
             },
             {
+                "Cypherpunk", new ColorScheme
+                {
+                    Normal = new Attribute(Color.Gray, Color.Black),
+                    Focus = new Attribute(Color.Black, Color.BrightCyan),
+                    HotNormal = new Attribute(Color.BrightYellow, Color.Black),
+                    HotFocus = new Attribute(Color.BrightYellow, Color.BrightCyan)
+                }
+            },
+            {
+                "Cypherpunk (Neon Green)", new ColorScheme
+                {
+                    Normal = new Attribute(Color.Gray, Color.Black),
+                    Focus = new Attribute(Color.Black, Color.BrightGreen),
+                    HotNormal = new Attribute(Color.BrightGreen, Color.Black),
+                    HotFocus = new Attribute(Color.Black, Color.BrightGreen)
+                }
+            },
+            {
+                "Cypherpunk (Cool Blue CRT)", new ColorScheme
+                {
+                    Normal = new Attribute(Color.White, Color.Black),
+                    Focus = new Attribute(Color.Black, Color.Cyan),
+                    HotNormal = new Attribute(Color.Cyan, Color.Black),
+                    HotFocus = new Attribute(Color.Black, Color.Cyan)
+                }
+            },
+            {
                 "Red Alert", new ColorScheme
                 {
                     Normal = new Attribute(Color.White, Color.Red),
@@ -170,7 +197,7 @@ public sealed partial class MainView : Toplevel
                 }
             },
             {
-                "Orange Screen", new ColorScheme
+                "Old Yeller", new ColorScheme
                 {
                     Normal = new Attribute(Color.Black, Color.BrightYellow),
                     Focus = new Attribute(Color.White, Color.Black),
@@ -185,15 +212,6 @@ public sealed partial class MainView : Toplevel
                     Focus = new Attribute(Color.Black, Color.BrightMagenta),
                     HotNormal = new Attribute(Color.Yellow, Color.Magenta),
                     HotFocus = new Attribute(Color.Yellow, Color.BrightMagenta)
-                }
-            },
-            {
-                "Monochrome", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Gray, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.White),
-                    HotNormal = new Attribute(Color.White, Color.Black),
-                    HotFocus = new Attribute(Color.White, Color.White)
                 }
             },
             {
