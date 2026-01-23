@@ -29,6 +29,7 @@ public class TcpInstance : IDisposable
     private CancellationTokenSource? _cts;
     private TcpClient? _client;
     private TcpListener? _listener;
+    private TcpProxy? _proxy;
     private readonly Random _random = new();
 
     /// <summary>
@@ -70,16 +71,31 @@ public class TcpInstance : IDisposable
                 _listener.Start();
                 Status = ConnectionStatus.Listening;
             }
-            else
+            else if (Config.Type == ConnectionType.Client)
             {
                 _client = new TcpClient();
                 // Synchronously connect for the initial attempt so we can catch errors early
                 _client.Connect(Config.Host, Config.Port);
                 Status = ConnectionStatus.Connected;
             }
+            else if (Config.Type == ConnectionType.Proxy)
+            {
+                if (string.IsNullOrEmpty(Config.RemoteHost) || !Config.RemotePort.HasValue)
+                {
+                    throw new InvalidOperationException("Proxy requires RemoteHost and RemotePort.");
+                }
 
-            _workerThread = new Thread(Run) { IsBackground = true };
-            _workerThread.Start();
+                _proxy = new TcpProxy(Config.Port, Config.RemoteHost, Config.RemotePort.Value);
+                _proxy.OnLog += (msg) => Log(msg);
+                _proxy.Start();
+                Status = ConnectionStatus.Listening;
+            }
+
+            if (Config.Type != ConnectionType.Proxy)
+            {
+                _workerThread = new Thread(Run) { IsBackground = true };
+                _workerThread.Start();
+            }
             OnStatusChanged?.Invoke();
         }
         catch (Exception ex)
@@ -100,6 +116,7 @@ public class TcpInstance : IDisposable
         _cts?.Cancel();
         _client?.Close();
         _listener?.Stop();
+        _proxy?.Stop();
         Status = ConnectionStatus.Disconnected;
         OnStatusChanged?.Invoke();
     }
@@ -397,6 +414,7 @@ public class TcpInstance : IDisposable
         Stop();
         _cts?.Dispose();
         _client?.Dispose();
+        _proxy?.Dispose();
     }
 
     /// <summary>

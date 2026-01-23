@@ -77,6 +77,7 @@ public sealed partial class MainView : Toplevel
                 {
                     new("_Server", "F2", OnNewServer),
                     new("_Client", "F3", OnNewClient),
+                    new("_Proxy", "F10", OnNewProxy),
                 }),
                 new MenuBarItem("_Control", new MenuItem[]
                 {
@@ -90,6 +91,8 @@ public sealed partial class MainView : Toplevel
                 {
                     new("_Ping", "F8", OnPing),
                     new("_Port Scan", "Ctrl+P", OnPortScan),
+                    new("_Throughput Test", "Ctrl+T", OnThroughputTest),
+                    new("Packet _Generator", "Ctrl+G", OnPacketGenerator),
                     new("_List IP Addresses", "", OnListIPs),
                 }),
                 new MenuBarItem("T_hemes", CreateThemeMenuItems()),
@@ -160,7 +163,10 @@ public sealed partial class MainView : Toplevel
             if (e.KeyCode == Key.F6) OnDisposeConnection();
             if (e.KeyCode == Key.F7) OnSendManual();
             if (e.KeyCode == Key.F8) OnPing();
+            if (e.KeyCode == Key.T.WithCtrl) OnThroughputTest();
+            if (e.KeyCode == Key.G.WithCtrl) OnPacketGenerator();
             if (e.KeyCode == Key.F9) OnClearLogs();
+            if (e.KeyCode == Key.F10) OnNewProxy();
         };
     }
 

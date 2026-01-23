@@ -12,5 +12,9 @@ public enum ConnectionType
     /// <summary>
     /// Acts as a TCP client.
     /// </summary>
-    Client
+    Client,
+    /// <summary>
+    /// Acts as a TCP proxy.
+    /// </summary>
+    Proxy
 }

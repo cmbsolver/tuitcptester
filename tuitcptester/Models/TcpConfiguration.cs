@@ -26,6 +26,16 @@ public class TcpConfiguration
     public int Port { get; set; }
 
     /// <summary>
+    /// Gets or sets the remote host for a proxy connection.
+    /// </summary>
+    public string? RemoteHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the remote port for a proxy connection.
+    /// </summary>
+    public int? RemotePort { get; set; }
+
+    /// <summary>
     /// Gets the list of transactions to be sent automatically.
     /// </summary>
     public List<Transaction> AutoTransactions { get; } = new();

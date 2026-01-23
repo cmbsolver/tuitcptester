@@ -259,6 +259,130 @@ public sealed partial class MainView
     }
 
     /// <summary>
+    /// Opens a dialog to run a TCP throughput test.
+    /// </summary>
+    private void OnThroughputTest()
+    {
+        var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
+        var portField = new TextField { Text = "80", X = 15, Y = 2, Width = 10 };
+        var durationField = new TextField { Text = "10", X = 15, Y = 3, Width = 10 };
+
+        var dialog = new Dialog { Title = "Throughput Test", Width = 50, Height = 12, ColorScheme = ColorScheme };
+        dialog.Add(
+            new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
+            new Label { Text = "Port:", X = 1, Y = 2 }, portField,
+            new Label { Text = "Duration (s):", X = 1, Y = 3 }, durationField
+        );
+
+        var runBtn = new Button { Text = "Run Test", IsDefault = true };
+        runBtn.Accepting += (s, e) =>
+        {
+            string host = hostField.Text;
+            if (!int.TryParse(portField.Text, out int port) ||
+                !int.TryParse(durationField.Text, out int duration))
+            {
+                MessageBox.ErrorQuery("Input Error", "Invalid port or duration.", "Ok");
+                return;
+            }
+
+            Task.Run(async () =>
+            {
+                Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] Starting {duration}s test to {host}:{port}..."));
+
+                var result = await ThroughputTester.RunTestAsync(host, port, duration, (bytes) =>
+                {
+                    // Optionally update some UI element with progress
+                });
+
+                Application.Invoke(() =>
+                {
+                    if (result.Success)
+                    {
+                        string speed;
+                        if (result.BytesPerSecond > 1024 * 1024)
+                            speed = $"{result.BytesPerSecond / (1024 * 1024):F2} MB/s";
+                        else if (result.BytesPerSecond > 1024)
+                            speed = $"{result.BytesPerSecond / 1024:F2} KB/s";
+                        else
+                            speed = $"{result.BytesPerSecond:F2} B/s";
+
+                        var msg = $"Test Complete!\nTotal Sent: {result.TotalBytesSent / 1024} KB\nSpeed: {speed}";
+                        _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] {msg.Replace("\n", " ")}");
+                        MessageBox.Query("Throughput Result", msg, "Ok");
+                    }
+                    else
+                    {
+                        _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] Test failed to connect to {host}:{port}");
+                        MessageBox.ErrorQuery("Test Error", "Failed to connect or send data.", "Ok");
+                    }
+                });
+            });
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(runBtn);
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+    /// <summary>
+    /// Opens a dialog to generate and send custom packets.
+    /// </summary>
+    private void OnPacketGenerator()
+    {
+        var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
+        var portField = new TextField { Text = "80", X = 15, Y = 2, Width = 10 };
+        var hexField = new TextField { Text = "48454c4c4f", X = 15, Y = 3, Width = Dim.Fill() - 2 };
+        var iterationsField = new TextField { Text = "1", X = 15, Y = 4, Width = 10 };
+        var delayField = new TextField { Text = "100", X = 15, Y = 5, Width = 10 };
+
+        var dialog = new Dialog { Title = "Packet Generator", Width = 60, Height = 14, ColorScheme = ColorScheme };
+        dialog.Add(
+            new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
+            new Label { Text = "Port:", X = 1, Y = 2 }, portField,
+            new Label { Text = "Hex Data:", X = 1, Y = 3 }, hexField,
+            new Label { Text = "Iterations:", X = 1, Y = 4 }, iterationsField,
+            new Label { Text = "Delay (ms):", X = 1, Y = 5 }, delayField
+        );
+
+        var runBtn = new Button { Text = "Run", IsDefault = true };
+        runBtn.Accepting += (s, e) =>
+        {
+            string host = hostField.Text;
+            string hex = hexField.Text;
+            if (!int.TryParse(portField.Text, out int port) ||
+                !int.TryParse(iterationsField.Text, out int iterations) ||
+                !int.TryParse(delayField.Text, out int delay))
+            {
+                MessageBox.ErrorQuery("Input Error", "Invalid port, iterations, or delay.", "Ok");
+                return;
+            }
+
+            Task.Run(async () =>
+            {
+                await PacketGenerator.RunAsync(host, port, hex, iterations, delay, (msg) =>
+                {
+                    Application.Invoke(() =>
+                    {
+                        var timestamp = DateTime.Now;
+                        _logs.Insert(0, $"[{timestamp:HH:mm:ss}] {msg}");
+                        if (_logs.Count > 50) _logs.RemoveAt(50);
+                    });
+                });
+            });
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(runBtn);
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+    /// <summary>
     /// Updates the details view with information about the currently selected connection.
     /// </summary>
     private void UpdateDetails()
@@ -274,6 +398,7 @@ public sealed partial class MainView
             ? $"\nAuto-Tx: {config.AutoTransactions.Count} items, Interval: {config.IntervalMs?.ToString() ?? "On Receive"}, Next: {_selectedInstance.AutoTxIndex}"
             : "";
         var dumpInfo = !string.IsNullOrEmpty(config.DumpFilePath) ? $"\nDump File: {config.DumpFilePath}" : "";
+        var proxyInfo = config.Type == ConnectionType.Proxy ? $"\nForwarding to: {config.RemoteHost}:{config.RemotePort}" : "";
 
         _detailsView.Text = $"""
                              Name: {config.Name}
@@ -281,7 +406,7 @@ public sealed partial class MainView
                              Host: {config.Host}
                              Port: {config.Port}
                              Status: {_selectedInstance.Status}
-                             Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}{dumpInfo}
+                             Error: {_selectedInstance.LastError ?? "None"}{autoTxInfo}{dumpInfo}{proxyInfo}
                              """;
     }
 

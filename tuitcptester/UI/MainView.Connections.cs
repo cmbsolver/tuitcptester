@@ -198,6 +198,70 @@ public sealed partial class MainView
     }
 
     /// <summary>
+    /// Opens a dialog to create a new TCP Proxy.
+    /// </summary>
+    private void OnNewProxy()
+    {
+        var localPortLabel = new Label { Text = "Local Port:", X = 1, Y = 1 };
+        var localPortField = new TextField { Text = "8080", X = 20, Y = 1, Width = 10 };
+
+        var remoteHostLabel = new Label { Text = "Remote Host:", X = 1, Y = 2 };
+        var remoteHostField = new TextField { Text = "127.0.0.1", X = 20, Y = 2, Width = 30 };
+
+        var remotePortLabel = new Label { Text = "Remote Port:", X = 1, Y = 3 };
+        var remotePortField = new TextField { Text = "80", X = 20, Y = 3, Width = 10 };
+
+        var dialog = new Dialog
+        {
+            Title = "New TCP Proxy",
+            Width = 60, Height = 10,
+            ColorScheme = ColorScheme
+        };
+        dialog.Add(localPortLabel, localPortField, remoteHostLabel, remoteHostField, remotePortLabel, remotePortField);
+
+        var startBtn = new Button { Text = "Start", IsDefault = true };
+        startBtn.Accepting += (s, e) =>
+        {
+            if (int.TryParse(localPortField.Text, out int localPort) &&
+                int.TryParse(remotePortField.Text, out int remotePort))
+            {
+                var config = new TcpConfiguration
+                {
+                    Name = $"Proxy:{localPort}->{remoteHostField.Text}:{remotePort}",
+                    Type = ConnectionType.Proxy,
+                    Port = localPort,
+                    RemoteHost = remoteHostField.Text.ToString(),
+                    RemotePort = remotePort
+                };
+
+                var instance = new TcpInstance(config);
+                try
+                {
+                    instance.Start();
+                    AddInstance(instance);
+                    Application.RequestStop();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.ErrorQuery("Proxy Error", $"Could not start proxy: {ex.Message}", "Ok");
+                    instance.Dispose();
+                }
+            }
+            else
+            {
+                MessageBox.ErrorQuery("Input Error", "Invalid port numbers.", "Ok");
+            }
+        };
+        dialog.AddButton(startBtn);
+
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+
+        Application.Run(dialog);
+    }
+
+    /// <summary>
     /// Removes and disposes the selected connection.
     /// </summary>
     private void OnDisposeConnection()
