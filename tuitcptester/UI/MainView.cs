@@ -59,6 +59,7 @@ public sealed partial class MainView : Toplevel
                 new MenuBarItem("_Tools", new MenuItem[]
                 {
                     new("_Ping", "F8", OnPing),
+                    new("_Port Scan", "Ctrl+P", OnPortScan),
                     new("_List IP Addresses", "", OnListIPs),
                 }),
                 new MenuBarItem("T_hemes", CreateThemeMenuItems()),

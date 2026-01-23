@@ -181,6 +181,84 @@ public sealed partial class MainView
     }
 
     /// <summary>
+    /// Opens a dialog to scan a range of ports on a host.
+    /// </summary>
+    private void OnPortScan()
+    {
+        var hostField = new TextField { Text = "127.0.0.1", X = 13, Y = 1, Width = 30 };
+        var startPortField = new TextField { Text = "1", X = 13, Y = 2, Width = 10 };
+        var endPortField = new TextField { Text = "65535", X = 13, Y = 3, Width = 10 };
+
+        var dialog = new Dialog { Title = "Port Scan", Width = 50, Height = 12, ColorScheme = ColorScheme };
+        dialog.Add(
+            new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
+            new Label { Text = "Start Port:", X = 1, Y = 2 }, startPortField,
+            new Label { Text = "End Port:", X = 1, Y = 3 }, endPortField
+        );
+
+        var scanBtn = new Button { Text = "Scan", IsDefault = true };
+        scanBtn.Accepting += (s, e) =>
+        {
+            string host = hostField.Text;
+            if (!int.TryParse(startPortField.Text, out int startPort) ||
+                !int.TryParse(endPortField.Text, out int endPort))
+            {
+                MessageBox.ErrorQuery("Input Error", "Invalid port range.", "Ok");
+                return;
+            }
+
+            if (startPort > endPort || startPort < 1 || endPort > 65535)
+            {
+                MessageBox.ErrorQuery("Input Error", "Ports must be between 1 and 65535, and Start <= End.", "Ok");
+                return;
+            }
+
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var results = await PortScanner.ScanRangeAsync(host, startPort, endPort);
+                    var openPorts = results.Where(r => r.IsOpen).Select(r => r.Port).ToList();
+
+                    Application.Invoke(() =>
+                    {
+                        var timestamp = DateTime.Now;
+                        foreach (var port in openPorts)
+                        {
+                            var description = PortScanner.GetPortDescription(port);
+                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] Open port {port} ({description}) found on {host}");
+                            if (_logs.Count > 50) _logs.RemoveAt(50);
+                        }
+
+                        if (openPorts.Any())
+                        {
+                            MessageBox.Query("Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok");
+                        }
+                        else
+                        {
+                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] No open ports found on {host} in range {startPort}-{endPort}");
+                            if (_logs.Count > 50) _logs.RemoveAt(50);
+                            MessageBox.Query("Scan Results", $"No open ports found on {host} in range {startPort}-{endPort}.", "Ok");
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Application.Invoke(() => MessageBox.ErrorQuery("Scan Error", ex.Message, "Ok"));
+                }
+            });
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(scanBtn);
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+    /// <summary>
     /// Updates the details view with information about the currently selected connection.
     /// </summary>
     private void UpdateDetails()
