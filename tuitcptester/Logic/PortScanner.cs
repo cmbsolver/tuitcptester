@@ -4,10 +4,21 @@ using System.Threading;
 
 namespace tuitcptester.Logic;
 
+/// <summary>
+/// Provides utility methods for scanning TCP ports.
+/// </summary>
 public class PortScanner
 {
+    /// <summary>
+    /// Represents the result of a single port scan operation.
+    /// </summary>
+    /// <param name="Port">The port number that was scanned.</param>
+    /// <param name="IsOpen">True if the port was found to be open; otherwise, false.</param>
     public record ScanResult(int Port, bool IsOpen);
 
+    /// <summary>
+    /// A dictionary mapping common TCP port numbers to their standard service descriptions.
+    /// </summary>
     private static readonly Dictionary<int, string> CommonPorts = new()
     {
         { 20, "FTP (Data)" },
@@ -60,11 +71,25 @@ public class PortScanner
         { 27017, "MongoDB" }
     };
 
+    /// <summary>
+    /// Gets a human-readable description for a given port number, if known.
+    /// </summary>
+    /// <param name="port">The port number to look up.</param>
+    /// <returns>A string describing the common service on that port, or "Unknown Service".</returns>
     public static string GetPortDescription(int port)
     {
         return CommonPorts.TryGetValue(port, out var description) ? description : "Unknown Service";
     }
 
+    /// <summary>
+    /// Asynchronously scans a range of ports on a specified host.
+    /// </summary>
+    /// <param name="host">The host address to scan.</param>
+    /// <param name="startPort">The starting port of the range.</param>
+    /// <param name="endPort">The ending port of the range.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for each port scan attempt. Default is 200ms.</param>
+    /// <param name="onProgress">Optional callback invoked for each scanned port with the port number.</param>
+    /// <returns>A list of <see cref="ScanResult"/> objects for the scanned range.</returns>
     public static async Task<List<ScanResult>> ScanRangeAsync(string host, int startPort, int endPort, int timeoutMs = 200, Action<int>? onProgress = null)
     {
         var results = new ConcurrentBag<ScanResult>();
@@ -91,6 +116,13 @@ public class PortScanner
         return results.OrderBy(r => r.Port).ToList();
     }
 
+    /// <summary>
+    /// Asynchronously attempts to connect to a single TCP port to determine if it is open.
+    /// </summary>
+    /// <param name="host">The host address to scan.</param>
+    /// <param name="port">The port number to scan.</param>
+    /// <param name="timeoutMs">The timeout in milliseconds for the connection attempt. Default is 200ms.</param>
+    /// <returns>True if the connection was successful; otherwise, false.</returns>
     public static async Task<bool> ScanPortAsync(string host, int port, int timeoutMs = 200)
     {
         try

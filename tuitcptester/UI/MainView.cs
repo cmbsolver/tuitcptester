@@ -10,14 +10,44 @@ namespace tuitcptester.UI;
 /// </summary>
 public sealed partial class MainView : Toplevel
 {
+    /// <summary>
+    /// The top-level menu bar for the application.
+    /// </summary>
     private MenuBar _menu;
+
+    /// <summary>
+    /// The list view displaying active and configured connections.
+    /// </summary>
     private ListView _connectionList;
+
+    /// <summary>
+    /// The text view displaying details for the selected connection.
+    /// </summary>
     private TextView _detailsView;
+
+    /// <summary>
+    /// The list view displaying log messages.
+    /// </summary>
     private ListView _logView;
+
+    /// <summary>
+    /// Collection of TCP connection instances managed by the view.
+    /// </summary>
     private ObservableCollection<TcpInstance> _instances = new();
+
+    /// <summary>
+    /// Collection of log strings displayed in the log view.
+    /// </summary>
     private ObservableCollection<string> _logs = new();
+
+    /// <summary>
+    /// The currently selected TCP connection instance, if any.
+    /// </summary>
     private TcpInstance? _selectedInstance;
 
+    /// <summary>
+    /// A custom color scheme inspired by classic "green screen" terminals.
+    /// </summary>
     private static readonly ColorScheme GreenScreen = new ColorScheme
     {
         Normal = new Attribute(Color.Green, Color.Black),

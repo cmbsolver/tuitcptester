@@ -340,6 +340,11 @@ public class TcpInstance : IDisposable
     /// </summary>
     /// <param name="hex">The hex string to convert.</param>
     /// <returns>A byte array representing the hex string.</returns>
+    /// <summary>
+    /// Converts a hexadecimal string to a byte array.
+    /// </summary>
+    /// <param name="hex">The hex string to convert.</param>
+    /// <returns>A byte array representing the hex data.</returns>
     private byte[] HexToBytes(string hex)
     {
         hex = hex.Replace("-", "").Replace(" ", "");

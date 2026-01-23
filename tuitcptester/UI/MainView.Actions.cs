@@ -231,7 +231,7 @@ public sealed partial class MainView
                             if (_logs.Count > 50) _logs.RemoveAt(50);
                         }
 
-                        if (openPorts.Any())
+                        if (openPorts.Count != 0)
                         {
                             MessageBox.Query("Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok");
                         }
