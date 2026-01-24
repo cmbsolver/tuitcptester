@@ -54,7 +54,7 @@ A terminal-based utility for testing TCP connections, supporting both client and
 ### Installation & Build
 
 1. Clone the repository.
-2. Navigate to the project directory.
+2. Navigate to the `tuitcptester` directory.
 3. Build the project:
    ```bash
    dotnet build
@@ -64,11 +64,48 @@ A terminal-based utility for testing TCP connections, supporting both client and
    dotnet run
    ```
 
+### Building for Distribution
+
+The project includes a `build.sh` script to create self-contained binaries for Windows, Linux, and macOS.
+
+1. Make the script executable:
+   ```bash
+   chmod +x build.sh
+   ```
+2. Run the build script:
+   ```bash
+   ./build.sh
+   ```
+3. Enter the version number when prompted (e.g., `1.0.0`).
+
+The distributed binaries will be available in the `publish` directory as `.zip` (Windows) or `.tar.gz` (Linux/macOS) archives.
+
+### Running Distributed Binaries
+
+After extracting the archive for your platform:
+
+#### Linux / macOS
+```bash
+./tcptui/tuitcptester
+```
+
+#### Windows
+```powershell
+.\tcptui\tuitcptester.exe
+```
+
 ### Command Line Arguments
 
-You can pass a path to a configuration file as an argument to load it automatically on startup:
+You can pass a path to a configuration file as an argument to load it automatically on startup.
+
+**Using `dotnet run`:**
 ```bash
 dotnet run -- /path/to/config.json
+```
+
+**Using the distributed binary:**
+```bash
+./tcptui/tuitcptester /path/to/config.json
 ```
 
 ## Documentation
