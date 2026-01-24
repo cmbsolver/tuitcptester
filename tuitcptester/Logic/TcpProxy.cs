@@ -122,9 +122,8 @@ public class TcpProxy : IDisposable
             while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
             {
                 await destination.WriteAsync(buffer, 0, bytesRead, token);
-                string data = System.Text.Encoding.ASCII.GetString(buffer, 0, bytesRead).Replace("\r", "\\r").Replace("\n", "\\n");
-                string hex = DataUtils.ToHexString(buffer, 0, bytesRead);
-                Log($"{prefix} Forwarded {bytesRead} bytes: {data} (Hex: {hex})");
+                string hexDump = DataUtils.ToHexDump(buffer, 0, bytesRead);
+                Log($"{prefix} Forwarded {bytesRead} bytes:\n{hexDump}");
             }
         }
         catch (Exception)

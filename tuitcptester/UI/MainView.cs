@@ -142,6 +142,11 @@ public sealed partial class MainView : Toplevel
             Source = new ListWrapper<string>(_logs),
             Width = Dim.Fill(), Height = Dim.Fill()
         };
+        _logView.OpenSelectedItem += (s, e) =>
+        {
+            var log = _logs[e.Item];
+            MessageBox.Query("Log Entry", log, "Ok");
+        };
         bottomHalf.Add(_logView);
 
         Add(_menu, topHalf, detailsFrame, bottomHalf);

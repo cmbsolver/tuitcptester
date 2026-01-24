@@ -30,6 +30,51 @@ public static class DataUtils
     }
 
     /// <summary>
+    /// Generates a formatted hex dump (hex + ASCII side-by-side) for the given data.
+    /// </summary>
+    /// <param name="data">The data to dump.</param>
+    /// <param name="offset">The starting offset.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>A multi-line string containing the hex dump.</returns>
+    public static string ToHexDump(byte[] data, int offset, int count)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < count; i += 16)
+        {
+            int lineCount = Math.Min(16, count - i);
+            
+            // Address/Offset
+            sb.Append($"{(offset + i):x8}  ");
+
+            // Hex part
+            for (int j = 0; j < 16; j++)
+            {
+                if (j < lineCount)
+                    sb.Append($"{data[offset + i + j]:x2} ");
+                else
+                    sb.Append("   ");
+                
+                if (j == 7) sb.Append(" "); // Extra space at 8th byte
+            }
+
+            sb.Append(" |");
+
+            // ASCII part
+            for (int j = 0; j < lineCount; j++)
+            {
+                char c = (char)data[offset + i + j];
+                if (char.IsControl(c) || c > 127)
+                    sb.Append('.');
+                else
+                    sb.Append(c);
+            }
+            sb.Append('|');
+            if (i + 16 < count) sb.AppendLine();
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Converts a hexadecimal string to a byte array.
     /// </summary>
     /// <param name="hex">The hex string to convert.</param>

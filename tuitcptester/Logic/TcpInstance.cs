@@ -220,9 +220,8 @@ public class TcpInstance : IDisposable
                         break;
                     }
 
-                    string received = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                    string hex = DataUtils.ToHexString(buffer, 0, bytesRead);
-                    Log($"Received: {received} (Hex: {hex})");
+                    string hexDump = DataUtils.ToHexDump(buffer, 0, bytesRead);
+                    Log($"Received {bytesRead} bytes:\n{hexDump}");
 
                     // If no interval is selected, send next transaction on receive
                     if (Config.IntervalMs == null && Config.AutoTransactions.Any())
@@ -345,8 +344,8 @@ public class TcpInstance : IDisposable
             };
 
             stream.Write(data, 0, data.Length);
-            string hex = DataUtils.ToHexString(data);
-            Log($"Sent ({tx.Encoding}): {dataToSend.Replace("\r", "\\r").Replace("\n", "\\n")} (Hex: {hex})");
+            string hexDump = DataUtils.ToHexDump(data, 0, data.Length);
+            Log($"Sent ({tx.Encoding}) {data.Length} bytes:\n{hexDump}");
         }
         catch (Exception ex)
         {
