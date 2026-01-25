@@ -162,9 +162,15 @@ public sealed partial class MainView
                 try
                 {
                     var ping = new System.Net.NetworkInformation.Ping();
-                    var reply = ping.Send(host);
-                    Application.Invoke(() => MessageBox.Query("Ping Result",
-                        $"Status: {reply.Status}\nTime: {reply.RoundtripTime}ms", "Ok"));
+                    var results = new System.Collections.Generic.List<string>();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var reply = ping.Send(host);
+                        results.Add($"#{i + 1}: Status: {reply.Status}, Time: {reply.RoundtripTime}ms");
+                    }
+
+                    string summary = string.Join("\n", results);
+                    Application.Invoke(() => MessageBox.Query("Ping Results", summary, "Ok"));
                 }
                 catch (Exception ex)
                 {
