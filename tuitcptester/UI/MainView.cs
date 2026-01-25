@@ -71,6 +71,7 @@ public sealed partial class MainView : Toplevel
                 {
                     new("_Save Configuration", "", OnSaveConfig),
                     new("_Load Configuration", "", OnLoadConfig),
+                    new("_Export Logs", "", OnExportLogs),
                     new("_Quit", "Ctrl+Q", () => Application.RequestStop())
                 }),
                 new MenuBarItem("_New", new MenuItem[]
@@ -91,7 +92,7 @@ public sealed partial class MainView : Toplevel
                 {
                     new("_Ping", "F8", OnPing),
                     new("_Port Scan", "Ctrl+P", OnPortScan),
-                    new("_Throughput Test", "Ctrl+T", OnThroughputTest),
+                    new("_DNS Lookup", "Ctrl+D", OnDnsLookup),
                     new("Packet _Generator", "Ctrl+G", OnPacketGenerator),
                     new("_List IP Addresses", "", OnListIPs),
                 }),
@@ -168,7 +169,7 @@ public sealed partial class MainView : Toplevel
             if (e.KeyCode == Key.F6) OnDisposeConnection();
             if (e.KeyCode == Key.F7) OnSendManual();
             if (e.KeyCode == Key.F8) OnPing();
-            if (e.KeyCode == Key.T.WithCtrl) OnThroughputTest();
+            if (e.KeyCode == Key.D.WithCtrl) OnDnsLookup();
             if (e.KeyCode == Key.G.WithCtrl) OnPacketGenerator();
             if (e.KeyCode == Key.F9) OnClearLogs();
             if (e.KeyCode == Key.F10) OnNewProxy();

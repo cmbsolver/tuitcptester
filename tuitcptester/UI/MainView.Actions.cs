@@ -264,74 +264,6 @@ public sealed partial class MainView
         Application.Run(dialog);
     }
 
-    /// <summary>
-    /// Opens a dialog to run a TCP throughput test.
-    /// </summary>
-    private void OnThroughputTest()
-    {
-        var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
-        var portField = new TextField { Text = "80", X = 15, Y = 2, Width = 10 };
-        var durationField = new TextField { Text = "10", X = 15, Y = 3, Width = 10 };
-
-        var dialog = new Dialog { Title = "Throughput Test", Width = 50, Height = 12, ColorScheme = ColorScheme };
-        dialog.Add(
-            new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
-            new Label { Text = "Port:", X = 1, Y = 2 }, portField,
-            new Label { Text = "Duration (s):", X = 1, Y = 3 }, durationField
-        );
-
-        var runBtn = new Button { Text = "Run Test", IsDefault = true };
-        runBtn.Accepting += (s, e) =>
-        {
-            string host = hostField.Text;
-            if (!int.TryParse(portField.Text, out int port) ||
-                !int.TryParse(durationField.Text, out int duration))
-            {
-                MessageBox.ErrorQuery("Input Error", "Invalid port or duration.", "Ok");
-                return;
-            }
-
-            Task.Run(async () =>
-            {
-                Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] Starting {duration}s test to {host}:{port}..."));
-
-                var result = await ThroughputTester.RunTestAsync(host, port, duration, (bytes) =>
-                {
-                    // Optionally update some UI element with progress
-                });
-
-                Application.Invoke(() =>
-                {
-                    if (result.Success)
-                    {
-                        string speed;
-                        if (result.BytesPerSecond > 1024 * 1024)
-                            speed = $"{result.BytesPerSecond / (1024 * 1024):F2} MB/s";
-                        else if (result.BytesPerSecond > 1024)
-                            speed = $"{result.BytesPerSecond / 1024:F2} KB/s";
-                        else
-                            speed = $"{result.BytesPerSecond:F2} B/s";
-
-                        var msg = $"Test Complete!\nTotal Sent: {result.TotalBytesSent / 1024} KB\nSpeed: {speed}";
-                        _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] {msg.Replace("\n", " ")}");
-                        MessageBox.Query("Throughput Result", msg, "Ok");
-                    }
-                    else
-                    {
-                        _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] [Throughput] Test failed to connect to {host}:{port}");
-                        MessageBox.ErrorQuery("Test Error", "Failed to connect or send data.", "Ok");
-                    }
-                });
-            });
-            Application.RequestStop();
-        };
-
-        dialog.AddButton(runBtn);
-        var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
-        dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
-    }
 
     /// <summary>
     /// Opens a dialog to generate and send custom packets.
@@ -382,6 +314,54 @@ public sealed partial class MainView
         };
 
         dialog.AddButton(runBtn);
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+    /// <summary>
+    /// Opens a dialog to resolve a hostname or perform a reverse DNS lookup.
+    /// </summary>
+    private void OnDnsLookup()
+    {
+        var queryField = new TextField { Text = "google.com", X = 13, Y = 1, Width = 30 };
+        var dialog = new Dialog { Title = "DNS Lookup", Width = 50, Height = 10, ColorScheme = ColorScheme };
+        dialog.Add(new Label { Text = "Host/IP:", X = 1, Y = 1 }, queryField);
+
+        var resolveBtn = new Button { Text = "Resolve", IsDefault = true };
+        resolveBtn.Accepting += (s, e) =>
+        {
+            string query = queryField.Text;
+            Task.Run(async () =>
+            {
+                try
+                {
+                    string result;
+                    if (System.Net.IPAddress.TryParse(query, out _))
+                    {
+                        var host = await DnsHelper.ReverseLookupAsync(query);
+                        result = host != null ? $"Hostname: {host}" : "No hostname found for this IP.";
+                    }
+                    else
+                    {
+                        var addresses = await DnsHelper.ResolveHostAsync(query);
+                        result = addresses.Count != 0 
+                            ? $"Addresses:\n{string.Join("\n", addresses.Select(a => a.ToString()))}" 
+                            : "Could not resolve hostname.";
+                    }
+
+                    Application.Invoke(() => MessageBox.Query("DNS Results", result, "Ok"));
+                }
+                catch (Exception ex)
+                {
+                    Application.Invoke(() => MessageBox.ErrorQuery("DNS Error", ex.Message, "Ok"));
+                }
+            });
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(resolveBtn);
         var cancelBtn = new Button { Text = "Cancel" };
         cancelBtn.Accepting += (s, e) => Application.RequestStop();
         dialog.AddButton(cancelBtn);

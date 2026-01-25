@@ -72,4 +72,39 @@ public sealed partial class MainView
             MessageBox.ErrorQuery("Error", $"Failed to load config: {ex.Message}", "Ok");
         }
     }
+
+    /// <summary>
+    /// Exports the current logs to a text file.
+    /// </summary>
+    private void OnExportLogs()
+    {
+        if (_logs.Count == 0)
+        {
+            MessageBox.Query("Export", "No logs to export.", "Ok");
+            return;
+        }
+
+        var dialog = new SaveDialog
+        {
+            Title = "Export Logs",
+            OpenMode = OpenMode.File
+        };
+        dialog.Path = "logs.txt";
+
+        Application.Run(dialog);
+
+        if (dialog.Path == null || dialog.Canceled) return;
+        var path = dialog.Path.ToString();
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            File.WriteAllLines(path, _logs);
+            MessageBox.Query("Export", $"Logs exported to {Path.GetFileName(path)}", "Ok");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.ErrorQuery("Export Error", ex.Message, "Ok");
+        }
+    }
 }
