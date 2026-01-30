@@ -92,6 +92,7 @@ public sealed partial class MainView : Toplevel
                 {
                     new("_Ping", "F8", OnPing),
                     new("_Port Scan", "Ctrl+P", OnPortScan),
+                    new("Port Transaction Scan", "Ctrl+T", OnPortTransactionScan),
                     new("_DNS Lookup", "Ctrl+D", OnDnsLookup),
                     new("Packet _Generator", "Ctrl+G", OnPacketGenerator),
                     new("_List IP Addresses", "", OnListIPs),
@@ -171,6 +172,7 @@ public sealed partial class MainView : Toplevel
             if (e.KeyCode == Key.F8) OnPing();
             if (e.KeyCode == Key.D.WithCtrl) OnDnsLookup();
             if (e.KeyCode == Key.G.WithCtrl) OnPacketGenerator();
+            if (e.KeyCode == Key.T.WithCtrl) OnPortTransactionScan();
             if (e.KeyCode == Key.F9) OnClearLogs();
             if (e.KeyCode == Key.F10) OnNewProxy();
         };

@@ -266,6 +266,155 @@ public sealed partial class MainView
 
 
     /// <summary>
+    /// Opens a dialog to scan a range of ports and send specified data to each open port.
+    /// </summary>
+    private void OnPortTransactionScan()
+    {
+        var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
+        var startPortField = new TextField { Text = "1", X = 15, Y = 2, Width = 10 };
+        var endPortField = new TextField { Text = "65535", X = 15, Y = 3, Width = 10 };
+        
+        var dataLabel = new Label { Text = "Data (Hex/Base64/ASCII):", X = 1, Y = 5 };
+        var dataField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill()! - 2 };
+
+        var encodingLabel = new Label { Text = "Encoding:", X = 1, Y = 8 };
+        var encodingGroup = new RadioGroup
+        {
+            X = 1, Y = 9,
+            RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
+        };
+
+        var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 12 };
+        var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 13 };
+
+        var dialog = new Dialog { Title = "Port Transaction Scan", Width = 60, Height = 20, ColorScheme = ColorScheme };
+        dialog.Add(
+            new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
+            new Label { Text = "Start Port:", X = 1, Y = 2 }, startPortField,
+            new Label { Text = "End Port:", X = 1, Y = 3 }, endPortField,
+            dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox
+        );
+
+        var runBtn = new Button { Text = "Run", IsDefault = true };
+        runBtn.Accepting += (s, e) =>
+        {
+            string host = hostField.Text;
+            if (!int.TryParse(startPortField.Text, out int startPort) ||
+                !int.TryParse(endPortField.Text, out int endPort))
+            {
+                MessageBox.ErrorQuery("Input Error", "Invalid port range.", "Ok");
+                return;
+            }
+
+            var tx = new Transaction
+            {
+                Data = dataField.Text,
+                Encoding = (TransactionEncoding)encodingGroup.SelectedItem,
+                AppendReturn = returnCheckbox.CheckedState == CheckState.Checked,
+                AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
+            };
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Starting Port Transaction Scan on {host} ({startPort}-{endPort})..."));
+                    
+                    for (int port = startPort; port <= endPort; port++)
+                    {
+                        int currentPort = port;
+                        try
+                        {
+                            using var client = new System.Net.Sockets.TcpClient();
+                            var connectTask = client.ConnectAsync(host, currentPort);
+                            var delayTask = Task.Delay(200); // 200ms timeout like in PortScanner
+                            
+                            var completedTask = await Task.WhenAny(connectTask, delayTask);
+                            if (completedTask == connectTask && client.Connected)
+                            {
+                                Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} is OPEN. Sending data..."));
+                                
+                                using var stream = client.GetStream();
+                                stream.ReadTimeout = 1000;
+                                stream.WriteTimeout = 1000;
+
+                                // Prepare data
+                                string dataToSend = tx.Data;
+                                if (tx.AppendReturn) dataToSend += "\r";
+                                if (tx.AppendNewline) dataToSend += "\n";
+
+                                byte[] buffer;
+                                switch (tx.Encoding)
+                                {
+                                    case TransactionEncoding.Ascii:
+                                        buffer = System.Text.Encoding.ASCII.GetBytes(dataToSend);
+                                        break;
+                                    case TransactionEncoding.Hex:
+                                        buffer = DataUtils.HexToBytes(dataToSend);
+                                        break;
+                                    case TransactionEncoding.Binary:
+                                        buffer = Convert.FromBase64String(dataToSend);
+                                        break;
+                                    default:
+                                        buffer = System.Text.Encoding.ASCII.GetBytes(dataToSend);
+                                        break;
+                                }
+
+                                await stream.WriteAsync(buffer, 0, buffer.Length);
+
+                                // Read response
+                                byte[] readBuffer = new byte[4096];
+                                var readTask = stream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                                var readDelayTask = Task.Delay(500); // Wait up to 500ms for response
+                                
+                                var readCompletedTask = await Task.WhenAny(readTask, readDelayTask);
+                                if (readCompletedTask == readTask)
+                                {
+                                    int bytesRead = await readTask;
+                                    if (bytesRead > 0)
+                                    {
+                                        string responseHex = DataUtils.ToHexString(readBuffer, 0, bytesRead);
+                                        string responseAscii = System.Text.Encoding.ASCII.GetString(readBuffer, 0, bytesRead)
+                                            .Replace("\r", "\\r").Replace("\n", "\\n");
+                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} Response (ASCII): {responseAscii}"));
+                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} Response (Hex): {responseHex}"));
+                                    }
+                                    else
+                                    {
+                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort}: No response data received."));
+                                    }
+                                }
+                                else
+                                {
+                                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort}: Response timeout."));
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Port closed or error connecting
+                        }
+                    }
+                    
+                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port Transaction Scan on {host} completed."));
+                }
+                catch (Exception ex)
+                {
+                    Application.Invoke(() => MessageBox.ErrorQuery("Scan Error", ex.Message, "Ok"));
+                }
+            });
+            Application.RequestStop();
+        };
+
+        dialog.AddButton(runBtn);
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+        Application.Run(dialog);
+    }
+
+
+    /// <summary>
     /// Opens a dialog to generate and send custom packets.
     /// </summary>
     private void OnPacketGenerator()
