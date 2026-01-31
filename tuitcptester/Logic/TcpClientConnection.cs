@@ -3,6 +3,9 @@ using tuitcptester.Models;
 
 namespace tuitcptester.Logic;
 
+/// <summary>
+/// Manages a TCP client connection.
+/// </summary>
 public class TcpClientConnection : TcpConnectionBase
 {
     private readonly string _host;
@@ -11,6 +14,12 @@ public class TcpClientConnection : TcpConnectionBase
     private CancellationTokenSource? _cts;
     private readonly Action<byte[], int> _onDataReceived;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TcpClientConnection"/> class.
+    /// </summary>
+    /// <param name="host">The host to connect to.</param>
+    /// <param name="port">The port to connect to.</param>
+    /// <param name="onDataReceived">Callback for received data.</param>
     public TcpClientConnection(string host, int port, Action<byte[], int> onDataReceived)
     {
         _host = host;
@@ -18,6 +27,7 @@ public class TcpClientConnection : TcpConnectionBase
         _onDataReceived = onDataReceived;
     }
 
+    /// <inheritdoc/>
     public override void Start()
     {
         _cts = new CancellationTokenSource();
@@ -39,6 +49,7 @@ public class TcpClientConnection : TcpConnectionBase
         }
     }
 
+    /// <inheritdoc/>
     public override void Stop()
     {
         _cts?.Cancel();
@@ -47,6 +58,7 @@ public class TcpClientConnection : TcpConnectionBase
         Log("Disconnected.");
     }
 
+    /// <inheritdoc/>
     public override void Send(Transaction tx)
     {
         if (_client is { Connected: true })
@@ -59,6 +71,7 @@ public class TcpClientConnection : TcpConnectionBase
         }
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         Stop();

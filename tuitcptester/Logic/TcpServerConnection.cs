@@ -4,6 +4,9 @@ using tuitcptester.Models;
 
 namespace tuitcptester.Logic;
 
+/// <summary>
+/// Manages a TCP server connection that listens for incoming client connections.
+/// </summary>
 public class TcpServerConnection : TcpConnectionBase
 {
     private readonly int _port;
@@ -12,12 +15,18 @@ public class TcpServerConnection : TcpConnectionBase
     private CancellationTokenSource? _cts;
     private readonly Action<byte[], int> _onDataReceived;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TcpServerConnection"/> class.
+    /// </summary>
+    /// <param name="port">The port to listen on.</param>
+    /// <param name="onDataReceived">Callback for received data from clients.</param>
     public TcpServerConnection(int port, Action<byte[], int> onDataReceived)
     {
         _port = port;
         _onDataReceived = onDataReceived;
     }
 
+    /// <inheritdoc/>
     public override void Start()
     {
         _cts = new CancellationTokenSource();
@@ -39,6 +48,10 @@ public class TcpServerConnection : TcpConnectionBase
         }
     }
 
+    /// <summary>
+    /// Asynchronously accepts incoming client connections.
+    /// </summary>
+    /// <param name="token">Cancellation token to stop accepting clients.</param>
     private async Task AcceptClientsAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -68,6 +81,7 @@ public class TcpServerConnection : TcpConnectionBase
         }
     }
 
+    /// <inheritdoc/>
     public override void Stop()
     {
         _cts?.Cancel();
@@ -77,6 +91,7 @@ public class TcpServerConnection : TcpConnectionBase
         Log("Server stopped.");
     }
 
+    /// <inheritdoc/>
     public override void Send(Transaction tx)
     {
         if (_currentClient is { Connected: true })
@@ -89,6 +104,7 @@ public class TcpServerConnection : TcpConnectionBase
         }
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         Stop();

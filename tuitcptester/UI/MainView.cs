@@ -11,6 +11,9 @@ namespace tuitcptester.UI;
 /// </summary>
 public sealed partial class MainView : Toplevel
 {
+    /// <summary>
+    /// The view model that holds the application's state and logic.
+    /// </summary>
     private readonly MainViewModel _viewModel;
 
     /// <summary>

@@ -4,13 +4,20 @@ using tuitcptester.Models;
 
 namespace tuitcptester.Logic;
 
+/// <summary>
+/// Provides a base implementation for TCP connections, handling status changes and data sending.
+/// </summary>
 public abstract class TcpConnectionBase : ITcpConnection
 {
+    /// <inheritdoc/>
     public event Action<string>? OnLog;
+    /// <inheritdoc/>
     public event Action<ConnectionStatus>? OnStatusChanged;
+    /// <inheritdoc/>
     public event Action<string>? OnError;
 
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
+    /// <inheritdoc/>
     public ConnectionStatus Status
     {
         get => _status;
@@ -24,14 +31,32 @@ public abstract class TcpConnectionBase : ITcpConnection
         }
     }
 
+    /// <summary>
+    /// Invokes the <see cref="OnLog"/> event with the specified message.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
     protected void Log(string message) => OnLog?.Invoke(message);
+
+    /// <summary>
+    /// Invokes the <see cref="OnError"/> event with the specified message.
+    /// </summary>
+    /// <param name="message">The error message.</param>
     protected void Error(string message) => OnError?.Invoke(message);
 
+    /// <inheritdoc/>
     public abstract void Start();
+    /// <inheritdoc/>
     public abstract void Stop();
+    /// <inheritdoc/>
     public abstract void Send(Transaction tx);
+    /// <inheritdoc/>
     public abstract void Dispose();
 
+    /// <summary>
+    /// Sends a transaction over the specified network stream.
+    /// </summary>
+    /// <param name="tx">The transaction to send.</param>
+    /// <param name="stream">The network stream to write to.</param>
     protected void SendInternal(Transaction tx, NetworkStream stream)
     {
         try
@@ -58,6 +83,12 @@ public abstract class TcpConnectionBase : ITcpConnection
         }
     }
 
+    /// <summary>
+    /// Handles incoming data from a network stream in a loop.
+    /// </summary>
+    /// <param name="stream">The network stream to read from.</param>
+    /// <param name="token">A cancellation token to stop the loop.</param>
+    /// <param name="onDataReceived">A callback invoked when data is received.</param>
     protected void HandleIncomingData(NetworkStream stream, CancellationToken token, Action<byte[], int> onDataReceived)
     {
         byte[] buffer = new byte[4096];

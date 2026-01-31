@@ -282,7 +282,7 @@ public sealed partial class MainView
     }
     
     /// <summary>
-    /// Adds a new <see cref="TcpInstance"/> to the collection and sets up logging and event handlers.
+    /// Adds a new <see cref="TcpInstance"/> to the application's view model.
     /// </summary>
     /// <param name="instance">The TCP instance to add.</param>
     private void AddInstance(TcpInstance instance)

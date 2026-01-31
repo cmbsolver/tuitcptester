@@ -10,6 +10,9 @@ namespace tuitcptester.ViewModels;
 /// </summary>
 public class MainViewModel
 {
+    /// <summary>
+    /// The maximum number of log entries to keep in memory.
+    /// </summary>
     private const int MaxLogCount = 50;
 
     /// <summary>
