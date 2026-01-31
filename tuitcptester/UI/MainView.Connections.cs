@@ -292,8 +292,7 @@ public sealed partial class MainView
         _instances.Add(instance);
         instance.OnLog += (entry) => {
             Application.Invoke(() => {
-                _logs.Insert(0, $"[{entry.Timestamp:HH:mm:ss}] [{entry.ConnectionName}] {entry.Message}");
-                if (_logs.Count > 50) _logs.RemoveAt(50);
+                AddLog($"[{entry.Timestamp:HH:mm:ss}] [{entry.ConnectionName}] {entry.Message}");
             });
         };
         instance.OnStatusChanged += () => {

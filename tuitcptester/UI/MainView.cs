@@ -40,6 +40,17 @@ public sealed partial class MainView : Toplevel
     /// </summary>
     private ObservableCollection<string> _logs = new();
 
+    private const int MaxLogCount = 50;
+
+    private void AddLog(string formattedMsg)
+    {
+        _logs.Insert(0, formattedMsg);
+        while (_logs.Count > MaxLogCount)
+        {
+            _logs.RemoveAt(_logs.Count - 1);
+        }
+    }
+
     /// <summary>
     /// The currently selected TCP connection instance, if any.
     /// </summary>

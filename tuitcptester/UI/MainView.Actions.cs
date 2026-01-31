@@ -266,11 +266,7 @@ public sealed partial class MainView
                     void Log(string msg)
                     {
                         var timestamp = DateTime.Now;
-                        Application.Invoke(() =>
-                        {
-                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] {msg}");
-                            if (_logs.Count > 50) _logs.RemoveAt(50);
-                        });
+                        Application.Invoke(() => AddLog($"[{timestamp:HH:mm:ss}] [Scanner] {msg}"));
 
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
@@ -390,7 +386,7 @@ public sealed partial class MainView
                     {
                         var timestamp = DateTime.Now;
                         var formattedMsg = $"[{timestamp:HH:mm:ss}] {msg}";
-                        Application.Invoke(() => _logs.Insert(0, formattedMsg));
+                        Application.Invoke(() => AddLog(formattedMsg));
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
                             try
@@ -556,11 +552,7 @@ public sealed partial class MainView
                 await PacketGenerator.RunAsync(host, port, hex, iterations, delay, (msg) =>
                 {
                     var timestamp = DateTime.Now;
-                    Application.Invoke(() =>
-                    {
-                        _logs.Insert(0, $"[{timestamp:HH:mm:ss}] {msg}");
-                        if (_logs.Count > 50) _logs.RemoveAt(50);
-                    });
+                    Application.Invoke(() => AddLog($"[{timestamp:HH:mm:ss}] {msg}"));
 
                     if (!string.IsNullOrWhiteSpace(logFilePath))
                     {
