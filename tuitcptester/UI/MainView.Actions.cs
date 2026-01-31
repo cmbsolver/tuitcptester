@@ -150,13 +150,28 @@ public sealed partial class MainView
     private void OnPing()
     {
         var hostField = new TextField { Text = "127.0.0.1", X = 13, Y = 1, Width = 30 };
+        var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 3 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 4, Width = Dim.Fill()! - 12 };
+        var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 4 };
+        logFileBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Log File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                logFileField.Text = saveDialog.Path.ToString();
+            }
+        };
+
         var dialog = new Dialog { Title = "Ping IP", Width = 50, Height = 10, ColorScheme = ColorScheme };
-        dialog.Add(new Label { Text = "IP Address:", X = 1, Y = 1 }, hostField);
+        dialog.Add(
+            new Label { Text = "IP Address:", X = 1, Y = 1 }, hostField,
+            logFileLabel, logFileField, logFileBrowseBtn
+        );
 
         var pingBtn = new Button { Text = "Ping", IsDefault = true };
         pingBtn.Accepting += (s, e) =>
         {
             string host = hostField.Text;
+            string logFilePath = logFileField.Text.ToString();
             Task.Run(() =>
             {
                 try
@@ -166,7 +181,17 @@ public sealed partial class MainView
                     for (int i = 0; i < 10; i++)
                     {
                         var reply = ping.Send(host);
-                        results.Add($"#{i + 1}: Status: {reply.Status}, Time: {reply.RoundtripTime}ms");
+                        var msg = $"#{i + 1}: Status: {reply.Status}, Time: {reply.RoundtripTime}ms";
+                        results.Add(msg);
+                        
+                        if (!string.IsNullOrWhiteSpace(logFilePath))
+                        {
+                            try
+                            {
+                                File.AppendAllText(logFilePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Ping] {host} {msg}{Environment.NewLine}");
+                            }
+                            catch { /* ignore */ }
+                        }
                     }
 
                     string summary = string.Join("\n", results);
@@ -195,17 +220,31 @@ public sealed partial class MainView
         var startPortField = new TextField { Text = "1", X = 13, Y = 2, Width = 10 };
         var endPortField = new TextField { Text = "65535", X = 13, Y = 3, Width = 10 };
 
-        var dialog = new Dialog { Title = "Port Scan", Width = 50, Height = 12, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Port Scan", Width = 50, Height = 17, ColorScheme = ColorScheme };
+
+        var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 5 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill()! - 12 };
+        var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 6 };
+        logFileBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Log File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                logFileField.Text = saveDialog.Path.ToString();
+            }
+        };
+
         dialog.Add(
             new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
             new Label { Text = "Start Port:", X = 1, Y = 2 }, startPortField,
-            new Label { Text = "End Port:", X = 1, Y = 3 }, endPortField
+            new Label { Text = "End Port:", X = 1, Y = 3 }, endPortField,
+            logFileLabel, logFileField, logFileBrowseBtn
         );
 
         var scanBtn = new Button { Text = "Scan", IsDefault = true };
         scanBtn.Accepting += (s, e) =>
         {
             string host = hostField.Text;
+            string logFilePath = logFileField.Text.ToString();
             if (!int.TryParse(startPortField.Text, out int startPort) ||
                 !int.TryParse(endPortField.Text, out int endPort))
             {
@@ -224,30 +263,46 @@ public sealed partial class MainView
             {
                 try
                 {
+                    void Log(string msg)
+                    {
+                        var timestamp = DateTime.Now;
+                        Application.Invoke(() =>
+                        {
+                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] {msg}");
+                            if (_logs.Count > 50) _logs.RemoveAt(50);
+                        });
+
+                        if (!string.IsNullOrWhiteSpace(logFilePath))
+                        {
+                            try
+                            {
+                                File.AppendAllText(logFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] [Scanner] {msg}{Environment.NewLine}");
+                            }
+                            catch
+                            {
+                                // Ignore
+                            }
+                        }
+                    }
+
                     var results = await PortScanner.ScanRangeAsync(host, startPort, endPort);
                     var openPorts = results.Where(r => r.IsOpen).Select(r => r.Port).ToList();
 
-                    Application.Invoke(() =>
+                    foreach (var port in openPorts)
                     {
-                        var timestamp = DateTime.Now;
-                        foreach (var port in openPorts)
-                        {
-                            var description = PortScanner.GetPortDescription(port);
-                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] Open port {port} ({description}) found on {host}");
-                            if (_logs.Count > 50) _logs.RemoveAt(50);
-                        }
+                        var description = PortScanner.GetPortDescription(port);
+                        Log($"Open port {port} ({description}) found on {host}");
+                    }
 
-                        if (openPorts.Count != 0)
-                        {
-                            MessageBox.Query("Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok");
-                        }
-                        else
-                        {
-                            _logs.Insert(0, $"[{timestamp:HH:mm:ss}] [Scanner] No open ports found on {host} in range {startPort}-{endPort}");
-                            if (_logs.Count > 50) _logs.RemoveAt(50);
-                            MessageBox.Query("Scan Results", $"No open ports found on {host} in range {startPort}-{endPort}.", "Ok");
-                        }
-                    });
+                    if (openPorts.Count != 0)
+                    {
+                        Application.Invoke(() => MessageBox.Query("Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok"));
+                    }
+                    else
+                    {
+                        Log($"No open ports found on {host} in range {startPort}-{endPort}");
+                        Application.Invoke(() => MessageBox.Query("Scan Results", $"No open ports found on {host} in range {startPort}-{endPort}.", "Ok"));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -287,18 +342,31 @@ public sealed partial class MainView
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 12 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 13 };
 
-        var dialog = new Dialog { Title = "Port Transaction Scan", Width = 60, Height = 20, ColorScheme = ColorScheme };
+        var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 15 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 16, Width = Dim.Fill()! - 12 };
+        var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 16 };
+        logFileBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Log File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                logFileField.Text = saveDialog.Path.ToString();
+            }
+        };
+
+        var dialog = new Dialog { Title = "Port Transaction Scan", Width = 60, Height = 21, ColorScheme = ColorScheme };
         dialog.Add(
             new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
             new Label { Text = "Start Port:", X = 1, Y = 2 }, startPortField,
             new Label { Text = "End Port:", X = 1, Y = 3 }, endPortField,
-            dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox
+            dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox,
+            logFileLabel, logFileField, logFileBrowseBtn
         );
 
         var runBtn = new Button { Text = "Run", IsDefault = true };
         runBtn.Accepting += (s, e) =>
         {
             string host = hostField.Text;
+            string logFilePath = logFileField.Text.ToString();
             if (!int.TryParse(startPortField.Text, out int startPort) ||
                 !int.TryParse(endPortField.Text, out int endPort))
             {
@@ -318,7 +386,25 @@ public sealed partial class MainView
             {
                 try
                 {
-                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Starting Port Transaction Scan on {host} ({startPort}-{endPort})..."));
+                    void Log(string msg)
+                    {
+                        var timestamp = DateTime.Now;
+                        var formattedMsg = $"[{timestamp:HH:mm:ss}] {msg}";
+                        Application.Invoke(() => _logs.Insert(0, formattedMsg));
+                        if (!string.IsNullOrWhiteSpace(logFilePath))
+                        {
+                            try
+                            {
+                                File.AppendAllText(logFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}");
+                            }
+                            catch
+                            {
+                                // Ignore file write errors for now
+                            }
+                        }
+                    }
+
+                    Log($"Starting Port Transaction Scan on {host} ({startPort}-{endPort})...");
                     
                     for (int port = startPort; port <= endPort; port++)
                     {
@@ -332,7 +418,7 @@ public sealed partial class MainView
                             var completedTask = await Task.WhenAny(connectTask, delayTask);
                             if (completedTask == connectTask && client.Connected)
                             {
-                                Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} is OPEN. Sending data..."));
+                                Log($"Port {currentPort} is OPEN. Sending data...");
                                 
                                 using var stream = client.GetStream();
                                 stream.ReadTimeout = 1000;
@@ -360,6 +446,7 @@ public sealed partial class MainView
                                         break;
                                 }
 
+                                Log($"Port {currentPort} Sending ({tx.Encoding}) {buffer.Length} bytes:\n{DataUtils.ToHexDump(buffer, 0, buffer.Length)}");
                                 await stream.WriteAsync(buffer, 0, buffer.Length);
 
                                 // Read response
@@ -376,27 +463,31 @@ public sealed partial class MainView
                                         string responseHex = DataUtils.ToHexString(readBuffer, 0, bytesRead);
                                         string responseAscii = System.Text.Encoding.ASCII.GetString(readBuffer, 0, bytesRead)
                                             .Replace("\r", "\\r").Replace("\n", "\\n");
-                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} Response (ASCII): {responseAscii}"));
-                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort} Response (Hex): {responseHex}"));
+                                        Log($"Port {currentPort} Response (ASCII): {responseAscii}");
+                                        Log($"Port {currentPort} Response (Hex): {responseHex}");
                                     }
                                     else
                                     {
-                                        Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort}: No response data received."));
+                                        Log($"Port {currentPort}: No response data received.");
                                     }
                                 }
                                 else
                                 {
-                                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port {currentPort}: Response timeout."));
+                                    Log($"Port {currentPort}: Response timeout.");
                                 }
                             }
+                            else
+                            {
+                                Log($"Port {currentPort} is CLOSED or Connection timed out.");
+                            }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Port closed or error connecting
+                            Log($"Port {currentPort} Error: {ex.Message}");
                         }
                     }
                     
-                    Application.Invoke(() => _logs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Port Transaction Scan on {host} completed."));
+                    Log($"Port Transaction Scan on {host} completed.");
                 }
                 catch (Exception ex)
                 {
@@ -425,13 +516,25 @@ public sealed partial class MainView
         var iterationsField = new TextField { Text = "1", X = 15, Y = 4, Width = 10 };
         var delayField = new TextField { Text = "100", X = 15, Y = 5, Width = 10 };
 
-        var dialog = new Dialog { Title = "Packet Generator", Width = 60, Height = 14, ColorScheme = ColorScheme };
+        var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 7 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 8, Width = Dim.Fill()! - 12 };
+        var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 8 };
+        logFileBrowseBtn.Accepting += (s, e) => {
+            var saveDialog = new SaveDialog { Title = "Select Log File" };
+            Application.Run(saveDialog);
+            if (!saveDialog.Canceled && saveDialog.Path != null) {
+                logFileField.Text = saveDialog.Path.ToString();
+            }
+        };
+
+        var dialog = new Dialog { Title = "Packet Generator", Width = 60, Height = 13, ColorScheme = ColorScheme };
         dialog.Add(
             new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
             new Label { Text = "Port:", X = 1, Y = 2 }, portField,
             new Label { Text = "Hex Data:", X = 1, Y = 3 }, hexField,
             new Label { Text = "Iterations:", X = 1, Y = 4 }, iterationsField,
-            new Label { Text = "Delay (ms):", X = 1, Y = 5 }, delayField
+            new Label { Text = "Delay (ms):", X = 1, Y = 5 }, delayField,
+            logFileLabel, logFileField, logFileBrowseBtn
         );
 
         var runBtn = new Button { Text = "Run", IsDefault = true };
@@ -439,6 +542,7 @@ public sealed partial class MainView
         {
             string host = hostField.Text;
             string hex = hexField.Text;
+            string logFilePath = logFileField.Text.ToString();
             if (!int.TryParse(portField.Text, out int port) ||
                 !int.TryParse(iterationsField.Text, out int iterations) ||
                 !int.TryParse(delayField.Text, out int delay))
@@ -451,12 +555,24 @@ public sealed partial class MainView
             {
                 await PacketGenerator.RunAsync(host, port, hex, iterations, delay, (msg) =>
                 {
+                    var timestamp = DateTime.Now;
                     Application.Invoke(() =>
                     {
-                        var timestamp = DateTime.Now;
                         _logs.Insert(0, $"[{timestamp:HH:mm:ss}] {msg}");
                         if (_logs.Count > 50) _logs.RemoveAt(50);
                     });
+
+                    if (!string.IsNullOrWhiteSpace(logFilePath))
+                    {
+                        try
+                        {
+                            File.AppendAllText(logFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}");
+                        }
+                        catch
+                        {
+                            // Ignore file write errors
+                        }
+                    }
                 });
             });
             Application.RequestStop();
