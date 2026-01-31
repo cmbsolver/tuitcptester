@@ -654,6 +654,85 @@ public sealed partial class MainView
     }
 
     /// <summary>
+    /// Opens a dialog to load a transaction file for the selected connection.
+    /// </summary>
+    private void OnLoadTransactions()
+    {
+        if (_selectedInstance == null)
+        {
+            MessageBox.ErrorQuery("Load Transactions", "No connection selected.", "Ok");
+            return;
+        }
+
+        var autoTxLabel = new Label { Text = "Transactions (one per line):", X = 1, Y = 1 };
+        var autoTxField = new TextView { 
+            X = 1, Y = 2, 
+            Width = Dim.Fill()! - 2, Height = 8,
+            Text = string.Join("\n", _selectedInstance.Config.AutoTransactions.Select(t => t.Data))
+        };
+
+        var loadFileBtn = new Button { Text = "Load from File", X = 1, Y = 11 };
+        loadFileBtn.Accepting += (s, e) => {
+            var fileDialog = new OpenDialog { Title = "Load Transactions" };
+            Application.Run(fileDialog);
+            if (!fileDialog.Canceled && fileDialog.FilePaths.Count > 0)
+            {
+                var path = fileDialog.FilePaths[0];
+                try {
+                    var content = File.ReadAllText(path);
+                    autoTxField.Text = content;
+                } catch (Exception ex) {
+                    MessageBox.ErrorQuery("Load Error", $"Could not load file: {ex.Message}", "Ok");
+                }
+            }
+        };
+
+        var intervalLabel = new Label { Text = "Interval (ms, optional):", X = 1, Y = 13 };
+        var intervalField = new TextField { 
+            X = Pos.Right(intervalLabel) + 1, Y = 13, Width = 10,
+            Text = _selectedInstance.Config.IntervalMs?.ToString() ?? ""
+        };
+
+        var jitterLabel = new Label { Text = "Jitter Min/Max (ms):", X = 1, Y = 14 };
+        var jitterMinField = new TextField { 
+            X = Pos.Right(jitterLabel) + 1, Y = 14, Width = 8,
+            Text = _selectedInstance.Config.JitterMinMs?.ToString() ?? ""
+        };
+        var jitterMaxField = new TextField { 
+            X = Pos.Right(jitterMinField) + 1, Y = 14, Width = 8,
+            Text = _selectedInstance.Config.JitterMaxMs?.ToString() ?? ""
+        };
+
+        var dialog = new Dialog {
+            Title = "Load Transactions",
+            Width = 60, Height = 20,
+            ColorScheme = ColorScheme
+        };
+        dialog.Add(autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField);
+
+        var updateBtn = new Button { Text = "Update", IsDefault = true };
+        updateBtn.Accepting += (s, e) => {
+            var lines = autoTxField.Text.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var transactions = lines.Select(line => new Transaction { Data = line, Encoding = TransactionEncoding.Ascii }).ToList();
+
+            int? interval = int.TryParse(intervalField.Text.ToString(), out int i) ? i : null;
+            int? jitterMin = int.TryParse(jitterMinField.Text.ToString(), out int jmin) ? jmin : null;
+            int? jitterMax = int.TryParse(jitterMaxField.Text.ToString(), out int jmax) ? jmax : null;
+
+            _selectedInstance.UpdateAutoTransactions(transactions, interval, jitterMin, jitterMax);
+            UpdateDetails();
+            Application.RequestStop();
+        };
+        dialog.AddButton(updateBtn);
+
+        var cancelBtn = new Button { Text = "Cancel" };
+        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        dialog.AddButton(cancelBtn);
+
+        Application.Run(dialog);
+    }
+
+    /// <summary>
     /// Clears the logs from the log view.
     /// </summary>
     private void OnClearLogs()

@@ -79,6 +79,7 @@ public sealed partial class MainView : Toplevel
                     new("_Start", "F4", OnStartConnection),
                     new("S_top", "F5", OnStopConnection),
                     new("_Remove", "F6", OnDisposeConnection),
+                    new("_Load Transactions", "Ctrl+L", OnLoadTransactions),
                     new("Send _Message", "F7", OnSendManual),
                     new("_Clear Logs", "F9", OnClearLogs)
                 }),
@@ -162,6 +163,7 @@ public sealed partial class MainView : Toplevel
             if (e.KeyCode == Key.F4) OnStopConnection();
             if (e.KeyCode == Key.F5) OnStartConnection();
             if (e.KeyCode == Key.F6) OnDisposeConnection();
+            if (e.KeyCode == Key.L.WithCtrl) OnLoadTransactions();
             if (e.KeyCode == Key.F7) OnSendManual();
             if (e.KeyCode == Key.F8) OnPing();
             if (e.KeyCode == Key.D.WithCtrl) OnDnsLookup();

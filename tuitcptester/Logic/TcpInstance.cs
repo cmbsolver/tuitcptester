@@ -129,6 +129,33 @@ public class TcpInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Updates the auto-transaction settings and restarts the auto-transaction loop if connected.
+    /// </summary>
+    /// <param name="transactions">The new list of transactions.</param>
+    /// <param name="intervalMs">The new interval in milliseconds.</param>
+    /// <param name="jitterMinMs">The new minimum jitter in milliseconds.</param>
+    /// <param name="jitterMaxMs">The new maximum jitter in milliseconds.</param>
+    public void UpdateAutoTransactions(List<Transaction> transactions, int? intervalMs, int? jitterMinMs, int? jitterMaxMs)
+    {
+        Config.AutoTransactions.Clear();
+        Config.AutoTransactions.AddRange(transactions);
+        Config.IntervalMs = intervalMs;
+        Config.JitterMinMs = jitterMinMs;
+        Config.JitterMaxMs = jitterMaxMs;
+
+        AutoTxIndex = 0;
+
+        if (Status == ConnectionStatus.Connected)
+        {
+            _autoTxCts?.Cancel();
+            _autoTxCts = new CancellationTokenSource();
+            StartAutoTransactions();
+        }
+        
+        Log($"Updated auto-transactions: {transactions.Count} items, Interval: {intervalMs}ms, Jitter: {jitterMinMs}-{jitterMaxMs}ms");
+    }
+
     private void StartAutoTransactions()
     {
         if (Config.AutoTransactions.Any())
