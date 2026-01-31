@@ -12,7 +12,7 @@ public sealed partial class MainView
     /// </summary>
     private void OnSendManual()
     {
-        if (!_instances.Any())
+        if (!_viewModel.Instances.Any())
         {
             MessageBox.ErrorQuery("Send Message", "No connections exist. Please create a server or client first.",
                 "Ok");
@@ -259,14 +259,14 @@ public sealed partial class MainView
             }
 
 
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
                     void Log(string msg)
                     {
                         var timestamp = DateTime.Now;
-                        Application.Invoke(() => AddLog($"[{timestamp:HH:mm:ss}] [Scanner] {msg}"));
+                        Application.Invoke(() => _viewModel.AddLog($"[{timestamp:HH:mm:ss}] [Scanner] {msg}"));
 
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
@@ -378,7 +378,7 @@ public sealed partial class MainView
                 AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
             };
 
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -386,7 +386,7 @@ public sealed partial class MainView
                     {
                         var timestamp = DateTime.Now;
                         var formattedMsg = $"[{timestamp:HH:mm:ss}] {msg}";
-                        Application.Invoke(() => AddLog(formattedMsg));
+                        Application.Invoke(() => _viewModel.AddLog(formattedMsg));
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
                             try
@@ -547,12 +547,12 @@ public sealed partial class MainView
                 return;
             }
 
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 await PacketGenerator.RunAsync(host, port, hex, iterations, delay, (msg) =>
                 {
                     var timestamp = DateTime.Now;
-                    Application.Invoke(() => AddLog($"[{timestamp:HH:mm:ss}] {msg}"));
+                    Application.Invoke(() => _viewModel.AddLog($"[{timestamp:HH:mm:ss}] {msg}"));
 
                     if (!string.IsNullOrWhiteSpace(logFilePath))
                     {
@@ -658,7 +658,7 @@ public sealed partial class MainView
     /// </summary>
     private void OnClearLogs()
     {
-        _logs.Clear();
+        _viewModel.ClearLogs();
     }
 
     /// <summary>

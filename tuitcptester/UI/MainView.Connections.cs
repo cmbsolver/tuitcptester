@@ -275,10 +275,8 @@ public sealed partial class MainView
         var result = MessageBox.Query("Remove Connection", $"Are you sure you want to remove '{_selectedInstance.Config.Name}'?", "Yes", "No");
         if (result == 0)
         {
-            _selectedInstance.Dispose();
-            _instances.Remove(_selectedInstance);
+            _viewModel.RemoveInstance(_selectedInstance);
             _selectedInstance = null;
-            _connectionList.SetSource(_instances); // Refresh the list view
             UpdateDetails();
         }
     }
@@ -289,19 +287,6 @@ public sealed partial class MainView
     /// <param name="instance">The TCP instance to add.</param>
     private void AddInstance(TcpInstance instance)
     {
-        _instances.Add(instance);
-        instance.OnLog += (entry) => {
-            Application.Invoke(() => {
-                AddLog($"[{entry.Timestamp:HH:mm:ss}] [{entry.ConnectionName}] {entry.Message}");
-            });
-        };
-        instance.OnStatusChanged += () => {
-            Application.Invoke(UpdateDetails);
-        };
-        instance.OnError += (msg) => {
-            Application.Invoke(() => {
-                MessageBox.ErrorQuery("Connection Error", msg, "Ok");
-            });
-        };
+        _viewModel.AddInstance(instance);
     }
 }

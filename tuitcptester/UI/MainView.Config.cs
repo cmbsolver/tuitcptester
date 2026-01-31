@@ -25,7 +25,7 @@ public sealed partial class MainView
         var path = dialog.Path.ToString();
         if (string.IsNullOrEmpty(path)) return;
 
-        var configs = _instances.Select(i => i.Config).ToList();
+        var configs = _viewModel.Instances.Select(i => i.Config).ToList();
         var json = JsonSerializer.Serialize(new AppConfig { Connections = configs }, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json);
         MessageBox.Query("Save", $"Configuration saved to {Path.GetFileName(path)}", "Ok");
@@ -39,13 +39,7 @@ public sealed partial class MainView
     {
         if (!File.Exists(path)) return;
         var json = File.ReadAllText(path);
-        var config = JsonSerializer.Deserialize<AppConfig>(json);
-        if (config == null) return;
-        foreach (var instance in config.Connections.Select(c => new TcpInstance(c)))
-        {
-            AddInstance(instance);
-            instance.Start();
-        }
+        _viewModel.ImportConfiguration(json);
     }
 
     /// <summary>
@@ -78,7 +72,7 @@ public sealed partial class MainView
     /// </summary>
     private void OnExportLogs()
     {
-        if (_logs.Count == 0)
+        if (_viewModel.Logs.Count == 0)
         {
             MessageBox.Query("Export", "No logs to export.", "Ok");
             return;
@@ -99,7 +93,7 @@ public sealed partial class MainView
 
         try
         {
-            File.WriteAllLines(path, _logs);
+            File.WriteAllLines(path, _viewModel.Logs);
             MessageBox.Query("Export", $"Logs exported to {Path.GetFileName(path)}", "Ok");
         }
         catch (Exception ex)

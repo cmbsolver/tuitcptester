@@ -1,6 +1,7 @@
 using Terminal.Gui;
 using tuitcptester.Logic;
 using System.Collections.ObjectModel;
+using tuitcptester.ViewModels;
 using Attribute = Terminal.Gui.Attribute;
 
 namespace tuitcptester.UI;
@@ -10,6 +11,8 @@ namespace tuitcptester.UI;
 /// </summary>
 public sealed partial class MainView : Toplevel
 {
+    private readonly MainViewModel _viewModel;
+
     /// <summary>
     /// The top-level menu bar for the application.
     /// </summary>
@@ -29,27 +32,6 @@ public sealed partial class MainView : Toplevel
     /// The list view displaying log messages.
     /// </summary>
     private ListView _logView;
-
-    /// <summary>
-    /// Collection of TCP connection instances managed by the view.
-    /// </summary>
-    private ObservableCollection<TcpInstance> _instances = new();
-
-    /// <summary>
-    /// Collection of log strings displayed in the log view.
-    /// </summary>
-    private ObservableCollection<string> _logs = new();
-
-    private const int MaxLogCount = 50;
-
-    private void AddLog(string formattedMsg)
-    {
-        _logs.Insert(0, formattedMsg);
-        while (_logs.Count > MaxLogCount)
-        {
-            _logs.RemoveAt(_logs.Count - 1);
-        }
-    }
 
     /// <summary>
     /// The currently selected TCP connection instance, if any.
@@ -72,6 +54,7 @@ public sealed partial class MainView : Toplevel
     /// </summary>
     public MainView()
     {
+        _viewModel = new MainViewModel();
         Title = "TCP Test Tool";
 
         _menu = new MenuBar
@@ -124,12 +107,12 @@ public sealed partial class MainView : Toplevel
 
         _connectionList = new ListView
         {
-            Source = new ListWrapper<TcpInstance>(_instances),
+            Source = new ListWrapper<TcpInstance>(_viewModel.Instances),
             Width = Dim.Fill(), Height = Dim.Fill()
         };
         _connectionList.SelectedItemChanged += (s, e) =>
         {
-            _selectedInstance = _instances.Count > e.Item ? _instances[e.Item] : null;
+            _selectedInstance = _viewModel.Instances.Count > e.Item ? _viewModel.Instances[e.Item] : null;
             UpdateDetails();
         };
         topHalf.Add(_connectionList);
@@ -152,12 +135,12 @@ public sealed partial class MainView : Toplevel
         };
         _logView = new ListView
         {
-            Source = new ListWrapper<string>(_logs),
+            Source = new ListWrapper<string>(_viewModel.Logs),
             Width = Dim.Fill(), Height = Dim.Fill()
         };
         _logView.OpenSelectedItem += (s, e) =>
         {
-            var log = _logs[e.Item];
+            var log = _viewModel.Logs[e.Item];
             MessageBox.Query("Log Entry", log, "Ok");
         };
         bottomHalf.Add(_logView);
