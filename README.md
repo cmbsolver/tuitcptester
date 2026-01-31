@@ -11,9 +11,12 @@ A terminal-based utility for testing TCP connections, supporting both client and
     - Support for periodic sending (Interval in ms).
     - **Jitter Support**: Randomize the interval between transactions for more realistic testing.
     - **Sequential Sending**: Option to send the next transaction only upon receiving a response.
+    - **Runtime Updates**: Load or edit transactions and jitter settings while a connection is active without needing to reconnect.
 - **Manual Messaging**: Send custom data in ASCII, Hex, or Binary (Base64) formats.
 - **Control Characters**: Option to append `\r` (Return) and/or `\n` (Newline) to outgoing messages.
-- **File Integration**: Load transaction lists directly from text files.
+- **File Integration**: 
+    - Load transaction lists directly from text files.
+    - Includes `example_transaction.txt` with 1,000 lines of sample data for testing.
 - **Logging & Traffic Analysis**:
     - Real-time logs of all sent and received data.
     - **Hex & ASCII Logging**: All traffic is logged in both human-readable ASCII and raw Hex formats for easy debugging.
@@ -21,7 +24,8 @@ A terminal-based utility for testing TCP connections, supporting both client and
 - **Tools**:
     - **Ping Tool**: Built-in utility to check network reachability.
     - **Port Scanner**: Scan a range of ports on a target host to identify open services.
-    - **Throughput Tester**: Measure maximum data transfer rates and test connection stability.
+    - **Port Transaction Scan**: Scan a range of ports and send specific data to each open port to test service responses.
+    - **DNS Lookup**: Perform hostname resolution and reverse DNS lookups.
     - **Packet Generator**: Send custom hex packets with configurable iterations and delays.
     - **IP Address List**: Quickly view all active IP addresses on the machine.
 - **Themes**: Multiple UI color schemes including Green Screen (Default), Cyberpunk, Solarized Dark, and more.
@@ -40,8 +44,10 @@ A terminal-based utility for testing TCP connections, supporting both client and
 | **F7** | Manual Send Message |
 | **F8** | Ping IP |
 | **Ctrl+P** | Port Scan |
-| **Ctrl+T** | Throughput Test |
+| **Ctrl+T** | Port Transaction Scan |
 | **Ctrl+G** | Packet Generator |
+| **Ctrl+D** | DNS Lookup |
+| **Ctrl+L** | Load Transactions |
 | **F9** | Clear Logs |
 | **Ctrl+Q** | Quit Application |
 
@@ -117,7 +123,7 @@ This file can be used with tools like Sandcastle to generate comprehensive API d
 
 ## Project Structure
 
-- **Logic**: Core TCP connection management and communication handling.
+- **Logic**: Core TCP connection management and communication handling. Uses the Strategy pattern for different connection types (Client, Server, Proxy).
 - **Models**: Data structures for configurations, transactions, and logs.
-- **UI**: Terminal.Gui implementation, organized into partial classes for better readability.
+- **UI**: Terminal.Gui implementation, following the MVVM pattern with `MainViewModel` for state management. Organized into partial classes for better readability.
 - **Program.cs**: Application entry point.
