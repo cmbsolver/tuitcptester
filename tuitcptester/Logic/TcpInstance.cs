@@ -1,6 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using tuitcptester.Models;
 
 namespace tuitcptester.Logic;
@@ -26,8 +23,13 @@ public class TcpInstance : IDisposable
     public string? LastError { get; private set; }
 
     private ITcpConnection? _connection;
+    private BufferedFileLogSink? _logSink;
     private CancellationTokenSource? _autoTxCts;
     private readonly Random _random = new();
+    private Action<string>? _connectionLogHandler;
+    private Action<string>? _connectionErrorHandler;
+    private Action<ConnectionStatus>? _connectionStatusHandler;
+    private Action<string>? _logSinkErrorHandler;
 
     /// <summary>
     /// Event raised when a new log entry is available.
@@ -51,6 +53,23 @@ public class TcpInstance : IDisposable
     public TcpInstance(TcpConfiguration config)
     {
         Config = config;
+        ConfigureLogSink();
+    }
+
+    private void ConfigureLogSink()
+    {
+        DetachLogSinkErrorHandler();
+        _logSink?.Dispose();
+        _logSink = null;
+
+        if (string.IsNullOrWhiteSpace(Config.DumpFilePath))
+        {
+            return;
+        }
+
+        _logSink = new BufferedFileLogSink(Config.DumpFilePath);
+        _logSinkErrorHandler = HandleLogSinkError;
+        _logSink.OnError += _logSinkErrorHandler;
     }
 
     /// <summary>
@@ -58,51 +77,16 @@ public class TcpInstance : IDisposable
     /// </summary>
     public void Start()
     {
+        TeardownConnection(raiseStatusChanged: false);
+        _autoTxCts?.Dispose();
         _autoTxCts = new CancellationTokenSource();
 
         try
         {
-            if (Config.Type == ConnectionType.Server)
-            {
-                _connection = new TcpServerConnection(Config.Port, OnDataReceived);
-            }
-            else if (Config.Type == ConnectionType.Client)
-            {
-                _connection = new TcpClientConnection(Config.Host, Config.Port, OnDataReceived);
-            }
-            else if (Config.Type == ConnectionType.Proxy)
-            {
-                if (string.IsNullOrEmpty(Config.RemoteHost) || !Config.RemotePort.HasValue)
-                {
-                    throw new InvalidOperationException("Proxy requires RemoteHost and RemotePort.");
-                }
+            _connection = CreateConnection();
+            AttachConnectionHandlers();
 
-                _connection = new TcpProxyConnection(Config.Port, Config.RemoteHost, Config.RemotePort.Value);
-            }
-
-            if (_connection != null)
-            {
-                _connection.OnLog += (msg) => Log(msg);
-                _connection.OnError += (msg) =>
-                {
-                    LastError = msg;
-                    OnError?.Invoke(msg);
-                };
-                _connection.OnStatusChanged += (status) =>
-                {
-                    if (status == ConnectionStatus.Connected)
-                    {
-                        StartAutoTransactions();
-                    }
-                    else if (status == ConnectionStatus.Disconnected)
-                    {
-                        _autoTxCts?.Cancel();
-                    }
-                    OnStatusChanged?.Invoke();
-                };
-
-                _connection.Start();
-            }
+            _connection.Start();
         }
         catch (Exception ex)
         {
@@ -115,18 +99,19 @@ public class TcpInstance : IDisposable
 
     private void OnDataReceived(byte[] buffer, int count)
     {
-        string hexDump = DataUtils.ToHexDump(buffer, 0, count);
-        Log($"Received {count} bytes:\n{hexDump}");
+        if (Config.IncludePayloadHexDump)
+        {
+            string hexDump = DataUtils.ToHexDump(buffer, 0, count);
+            Log($"Received {count} bytes:\n{hexDump}");
+        }
+        else
+        {
+            Log($"Received {count} bytes.");
+        }
 
         // If no interval is selected, send next transaction on receive
-        if (Config.IntervalMs == null && Config.AutoTransactions.Any())
-        {
-            if (AutoTxIndex < Config.AutoTransactions.Count)
-            {
-                _connection?.Send(Config.AutoTransactions[AutoTxIndex]);
-                AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
-            }
-        }
+        if (Config.IntervalMs != null || !Config.AutoTransactions.Any()) return;
+        SendNextAutoTransaction();
     }
 
     /// <summary>
@@ -144,12 +129,13 @@ public class TcpInstance : IDisposable
         Config.JitterMinMs = jitterMinMs;
         Config.JitterMaxMs = jitterMaxMs;
 
+        ConfigureLogSink();
+
         AutoTxIndex = 0;
 
         if (Status == ConnectionStatus.Connected)
         {
-            _autoTxCts?.Cancel();
-            _autoTxCts = new CancellationTokenSource();
+            RestartAutoTransactions();
             StartAutoTransactions();
         }
         
@@ -158,10 +144,12 @@ public class TcpInstance : IDisposable
 
     private void StartAutoTransactions()
     {
-        if (Config.AutoTransactions.Any())
+        if (!Config.AutoTransactions.Any() || _autoTxCts == null)
         {
-            _ = Task.Run(() => RunAutoTransactions(_autoTxCts!.Token), _autoTxCts!.Token);
+            return;
         }
+
+        _ = Task.Run(() => RunAutoTransactions(_autoTxCts.Token), _autoTxCts.Token);
     }
 
     /// <summary>
@@ -169,9 +157,7 @@ public class TcpInstance : IDisposable
     /// </summary>
     public void Stop()
     {
-        _autoTxCts?.Cancel();
-        _connection?.Stop();
-        OnStatusChanged?.Invoke();
+        TeardownConnection(raiseStatusChanged: true);
     }
 
     /// <summary>
@@ -186,11 +172,7 @@ public class TcpInstance : IDisposable
     private async Task RunAutoTransactions(CancellationToken token)
     {
         // Send the first item immediately on connection
-        if (Config.AutoTransactions.Any())
-        {
-            _connection?.Send(Config.AutoTransactions[AutoTxIndex]);
-            AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
-        }
+        SendNextAutoTransaction();
 
         while (!token.IsCancellationRequested)
         {
@@ -215,10 +197,7 @@ public class TcpInstance : IDisposable
                 }
 
                 if (token.IsCancellationRequested) break;
-                if (Config.AutoTransactions.Count == 0) continue;
-                
-                _connection?.Send(Config.AutoTransactions[AutoTxIndex]);
-                AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
+                SendNextAutoTransaction();
             }
             else
             {
@@ -251,22 +230,7 @@ public class TcpInstance : IDisposable
     {
         var timestamp = DateTime.Now;
 
-        if (!string.IsNullOrWhiteSpace(Config.DumpFilePath))
-        {
-            try
-            {
-                File.AppendAllText(Config.DumpFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
-            }
-            catch (Exception ex)
-            {
-                OnLog?.Invoke(new LogEntry
-                {
-                    Timestamp = timestamp,
-                    Message = $"Dump Error: {ex.Message}",
-                    ConnectionName = Config.Name
-                });
-            }
-        }
+        _logSink?.Enqueue($"[{timestamp:yyyy-MM-dd HH:mm:ss}] {message}");
 
         OnLog?.Invoke(new LogEntry
         {
@@ -283,7 +247,142 @@ public class TcpInstance : IDisposable
     {
         Stop();
         _autoTxCts?.Dispose();
+        _autoTxCts = null;
+        DetachLogSinkErrorHandler();
+        _logSink?.Dispose();
+        _logSink = null;
+    }
+
+    private ITcpConnection CreateConnection()
+    {
+        return Config.Type switch
+        {
+            ConnectionType.Server => new TcpServerConnection(Config.Port, OnDataReceived),
+            ConnectionType.Client => new TcpClientConnection(Config.Host, Config.Port, OnDataReceived),
+            ConnectionType.Proxy when string.IsNullOrEmpty(Config.RemoteHost) || !Config.RemotePort.HasValue =>
+                throw new InvalidOperationException("Proxy requires RemoteHost and RemotePort."),
+            ConnectionType.Proxy => new TcpProxyConnection(Config.Port, Config.RemoteHost, Config.RemotePort.Value,
+                Config.IncludePayloadHexDump),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    private void AttachConnectionHandlers()
+    {
+        if (_connection == null)
+        {
+            return;
+        }
+
+        _connectionLogHandler = Log;
+        _connectionErrorHandler = HandleConnectionError;
+        _connectionStatusHandler = HandleConnectionStatusChanged;
+
+        _connection.OnLog += _connectionLogHandler;
+        _connection.OnError += _connectionErrorHandler;
+        _connection.OnStatusChanged += _connectionStatusHandler;
+    }
+
+    private void DetachConnectionHandlers()
+    {
+        if (_connection == null)
+        {
+            return;
+        }
+
+        if (_connectionLogHandler != null)
+        {
+            _connection.OnLog -= _connectionLogHandler;
+            _connectionLogHandler = null;
+        }
+
+        if (_connectionErrorHandler != null)
+        {
+            _connection.OnError -= _connectionErrorHandler;
+            _connectionErrorHandler = null;
+        }
+
+        if (_connectionStatusHandler != null)
+        {
+            _connection.OnStatusChanged -= _connectionStatusHandler;
+            _connectionStatusHandler = null;
+        }
+    }
+
+    private void HandleConnectionError(string message)
+    {
+        LastError = message;
+        OnError?.Invoke(message);
+    }
+
+    private void HandleConnectionStatusChanged(ConnectionStatus status)
+    {
+        if (status == ConnectionStatus.Connected)
+        {
+            StartAutoTransactions();
+        }
+        else if (status == ConnectionStatus.Disconnected)
+        {
+            CancelAutoTransactions();
+        }
+
+        OnStatusChanged?.Invoke();
+    }
+
+    private void RestartAutoTransactions()
+    {
+        CancelAutoTransactions();
+        _autoTxCts?.Dispose();
+        _autoTxCts = new CancellationTokenSource();
+    }
+
+    private void CancelAutoTransactions()
+    {
+        _autoTxCts?.Cancel();
+    }
+
+    private void TeardownConnection(bool raiseStatusChanged)
+    {
+        CancelAutoTransactions();
+        _connection?.Stop();
+        DetachConnectionHandlers();
         _connection?.Dispose();
+        _connection = null;
+
+        if (raiseStatusChanged)
+        {
+            OnStatusChanged?.Invoke();
+        }
+    }
+
+    private void SendNextAutoTransaction()
+    {
+        if (Config.AutoTransactions.Count == 0 || AutoTxIndex >= Config.AutoTransactions.Count)
+        {
+            return;
+        }
+
+        _connection?.Send(Config.AutoTransactions[AutoTxIndex]);
+        AutoTxIndex = (AutoTxIndex + 1) % Config.AutoTransactions.Count;
+    }
+
+    private void HandleLogSinkError(string message)
+    {
+        OnLog?.Invoke(new LogEntry
+        {
+            Timestamp = DateTime.Now,
+            Message = $"Dump Error: {message}",
+            ConnectionName = Config.Name
+        });
+    }
+
+    private void DetachLogSinkErrorHandler()
+    {
+        if (_logSink != null && _logSinkErrorHandler != null)
+        {
+            _logSink.OnError -= _logSinkErrorHandler;
+            _logSinkErrorHandler = null;
+        }
     }
 
     /// <summary>

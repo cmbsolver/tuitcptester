@@ -1,12 +1,11 @@
 using System.Net.Sockets;
-using System.Text;
 
 namespace tuitcptester.Logic;
 
 /// <summary>
 /// Provides logic for generating and sending custom packets (hex/raw) to a target.
 /// </summary>
-public class PacketGenerator
+public static class PacketGenerator
 {
     /// <summary>
     /// Sends a custom packet multiple times with a specified delay.
@@ -36,10 +35,10 @@ public class PacketGenerator
         {
             onLog?.Invoke($"[PacketGen] Connecting to {host}:{port}...");
             await client.ConnectAsync(host, port, cancellationToken);
-            using var stream = client.GetStream();
+            await using var stream = client.GetStream();
             onLog?.Invoke($"[PacketGen] Connected. Sending {iterations} packets...");
 
-            for (int i = 0; i < iterations; i++)
+            for (var i = 0; i < iterations; i++)
             {
                 if (cancellationToken.IsCancellationRequested) break;
 

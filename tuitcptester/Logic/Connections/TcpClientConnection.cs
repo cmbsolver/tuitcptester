@@ -8,6 +8,7 @@ namespace tuitcptester.Logic;
 /// </summary>
 public class TcpClientConnection : TcpConnectionBase
 {
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
     private readonly string _host;
     private readonly int _port;
     private TcpClient? _client;
@@ -34,11 +35,21 @@ public class TcpClientConnection : TcpConnectionBase
         try
         {
             _client = new TcpClient();
-            _client.Connect(_host, _port);
+            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            connectCts.CancelAfter(ConnectTimeout);
+            _client.ConnectAsync(_host, _port, connectCts.Token).GetAwaiter().GetResult();
             Status = ConnectionStatus.Connected;
             Log("Connected.");
 
-            Task.Run(() => HandleIncomingData(_client.GetStream(), _cts.Token, _onDataReceived), _cts.Token);
+            _ = Task.Run(() => HandleIncomingDataAsync(_client.GetStream(), _cts.Token, _onDataReceived), _cts.Token);
+        }
+        catch (OperationCanceledException) when (_cts is { IsCancellationRequested: false })
+        {
+            Status = ConnectionStatus.Error;
+            var message = $"Connect timed out after {ConnectTimeout.TotalSeconds:0} seconds.";
+            Error(message);
+            Log(message);
+            throw new TimeoutException(message);
         }
         catch (Exception ex)
         {

@@ -7,15 +7,6 @@ namespace tuitcptester.Logic;
 /// </summary>
 public static class DataUtils
 {
-    /// <summary>
-    /// Converts a byte array to a hexadecimal string.
-    /// </summary>
-    /// <param name="data">The byte array to convert.</param>
-    /// <returns>A hexadecimal string representation of the data.</returns>
-    public static string ToHexString(byte[] data)
-    {
-        return string.Join(" ", data.Select(b => b.ToString("x2")));
-    }
 
     /// <summary>
     /// Converts a portion of a byte array to a hexadecimal string.
@@ -39,30 +30,30 @@ public static class DataUtils
     public static string ToHexDump(byte[] data, int offset, int count)
     {
         var sb = new StringBuilder();
-        for (int i = 0; i < count; i += 16)
+        for (var i = 0; i < count; i += 16)
         {
-            int lineCount = Math.Min(16, count - i);
+            var lineCount = Math.Min(16, count - i);
             
             // Address/Offset
             sb.Append($"{(offset + i):x8}  ");
 
             // Hex part
-            for (int j = 0; j < 16; j++)
+            for (var j = 0; j < 16; j++)
             {
                 if (j < lineCount)
                     sb.Append($"{data[offset + i + j]:x2} ");
                 else
                     sb.Append("   ");
                 
-                if (j == 7) sb.Append(" "); // Extra space at 8th byte
+                if (j == 7) sb.Append(' '); // Extra space at 8th byte
             }
 
             sb.Append(" |");
 
             // ASCII part
-            for (int j = 0; j < lineCount; j++)
+            for (var j = 0; j < lineCount; j++)
             {
-                char c = (char)data[offset + i + j];
+                var c = (char)data[offset + i + j];
                 if (char.IsControl(c) || c > 127)
                     sb.Append('.');
                 else

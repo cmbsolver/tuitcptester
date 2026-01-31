@@ -21,21 +21,33 @@ public class MainViewModel
     public ObservableCollection<TcpInstance> Instances { get; } = new();
 
     /// <summary>
-    /// Collection of log strings displayed in the log view.
+    /// Collection of log entries displayed in the log view.
     /// </summary>
-    public ObservableCollection<string> Logs { get; } = new();
+    public ObservableCollection<LogEntry> Logs { get; } = new();
+
+    private readonly Dictionary<TcpInstance, Action<string>> _errorHandlers = new();
 
     /// <summary>
     /// Adds a log message to the log collection.
     /// </summary>
-    /// <param name="formattedMsg">The formatted log message.</param>
-    public void AddLog(string formattedMsg)
+    /// <param name="entry">The log entry.</param>
+    public void AddLog(LogEntry entry)
     {
-        Logs.Insert(0, formattedMsg);
+        Logs.Insert(0, entry);
         while (Logs.Count > MaxLogCount)
         {
             Logs.RemoveAt(Logs.Count - 1);
         }
+    }
+
+    /// <summary>
+    /// Formats a log entry for display and export.
+    /// </summary>
+    /// <param name="entry">The log entry.</param>
+    /// <returns>The formatted log line.</returns>
+    public static string FormatLogEntry(LogEntry entry)
+    {
+        return $"[{entry.Timestamp:HH:mm:ss}] [{entry.ConnectionName}] {entry.Message}";
     }
 
     /// <summary>
@@ -53,14 +65,20 @@ public class MainViewModel
     public void AddInstance(TcpInstance instance)
     {
         Instances.Add(instance);
-        instance.OnLog += (entry) =>
+        instance.OnLog += AddLog;
+
+        Action<string> errorHandler = (msg) =>
         {
-            AddLog($"[{entry.Timestamp:HH:mm:ss}] [{entry.ConnectionName}] {entry.Message}");
+            AddLog(new LogEntry
+            {
+                Timestamp = DateTime.Now,
+                ConnectionName = $"ERROR/{instance.Config.Name}",
+                Message = msg
+            });
         };
-        instance.OnError += (msg) =>
-        {
-            AddLog($"[{DateTime.Now:HH:mm:ss}] [ERROR] [{instance.Config.Name}] {msg}");
-        };
+
+        _errorHandlers[instance] = errorHandler;
+        instance.OnError += errorHandler;
     }
 
     /// <summary>
@@ -69,20 +87,18 @@ public class MainViewModel
     /// <param name="instance">The TCP instance to remove.</param>
     public void RemoveInstance(TcpInstance instance)
     {
+        instance.OnLog -= AddLog;
+
+        if (_errorHandlers.Remove(instance, out var errorHandler))
+        {
+            instance.OnError -= errorHandler;
+        }
+
         instance.Stop();
         instance.Dispose();
         Instances.Remove(instance);
     }
 
-    /// <summary>
-    /// Saves the current configuration to a JSON string.
-    /// </summary>
-    /// <returns>A JSON representation of the configuration.</returns>
-    public string ExportConfiguration()
-    {
-        var configs = Instances.Select(i => i.Config).ToList();
-        return JsonSerializer.Serialize(new AppConfig { Connections = configs }, new JsonSerializerOptions { WriteIndented = true });
-    }
 
     /// <summary>
     /// Loads connection instances from a JSON string.
@@ -90,8 +106,33 @@ public class MainViewModel
     /// <param name="json">The JSON configuration string.</param>
     public void ImportConfiguration(string json)
     {
-        var config = JsonSerializer.Deserialize<AppConfig>(json);
-        if (config == null) return;
+        AppConfig? config;
+        try
+        {
+            config = JsonSerializer.Deserialize<AppConfig>(json);
+        }
+        catch (Exception ex)
+        {
+            AddLog(new LogEntry
+            {
+                Timestamp = DateTime.Now,
+                ConnectionName = "CONFIG",
+                Message = $"Failed to parse configuration: {ex.Message}"
+            });
+            return;
+        }
+
+        if (config == null)
+        {
+            AddLog(new LogEntry
+            {
+                Timestamp = DateTime.Now,
+                ConnectionName = "CONFIG",
+                Message = "Failed to parse configuration: empty or invalid payload."
+            });
+            return;
+        }
+
         foreach (var instance in config.Connections.Select(c => new TcpInstance(c)))
         {
             AddInstance(instance);
@@ -99,9 +140,14 @@ public class MainViewModel
             {
                 instance.Start();
             }
-            catch
+            catch (Exception ex)
             {
-                // Errors are logged via OnError event
+                AddLog(new LogEntry
+                {
+                    Timestamp = DateTime.Now,
+                    ConnectionName = $"ERROR/{instance.Config.Name}",
+                    Message = $"Failed to start instance: {ex.Message}"
+                });
             }
         }
     }

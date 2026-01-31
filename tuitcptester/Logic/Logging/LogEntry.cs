@@ -8,15 +8,15 @@ public class LogEntry
     /// <summary>
     /// Gets or sets the time when the log entry was created.
     /// </summary>
-    public DateTime Timestamp { get; set; }
+    public DateTime Timestamp { get; init; }
 
     /// <summary>
     /// Gets or sets the log message content.
     /// </summary>
-    public string Message { get; set; } = string.Empty;
+    public string Message { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the name of the connection that generated this log.
     /// </summary>
-    public string ConnectionName { get; set; } = string.Empty;
+    public string ConnectionName { get; init; } = string.Empty;
 }

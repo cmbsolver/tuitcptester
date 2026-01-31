@@ -37,7 +37,7 @@ public class TcpServerConnection : TcpConnectionBase
             Status = ConnectionStatus.Listening;
             Log($"Listening on port {_port}...");
 
-            Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
+            _ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
         }
         catch (Exception ex)
         {
@@ -58,21 +58,18 @@ public class TcpServerConnection : TcpConnectionBase
         {
             try
             {
-                if (_listener?.Pending() == true)
-                {
-                    var client = await _listener.AcceptTcpClientAsync(token);
-                    Log($"Accepted connection from {client.Client.RemoteEndPoint}");
-                    
-                    _currentClient?.Close();
-                    _currentClient = client;
-                    Status = ConnectionStatus.Connected;
+                var client = await _listener!.AcceptTcpClientAsync(token);
+                Log($"Accepted connection from {client.Client.RemoteEndPoint}");
 
-                    Task.Run(() => HandleIncomingData(_currentClient.GetStream(), token, _onDataReceived), token);
-                }
-                else
-                {
-                    await Task.Delay(100, token);
-                }
+                _currentClient?.Close();
+                _currentClient = client;
+                Status = ConnectionStatus.Connected;
+
+                _ = Task.Run(() => HandleIncomingDataAsync(_currentClient.GetStream(), token, _onDataReceived), token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
             catch (Exception ex) when (!token.IsCancellationRequested)
             {

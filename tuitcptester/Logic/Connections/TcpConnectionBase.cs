@@ -16,20 +16,17 @@ public abstract class TcpConnectionBase : ITcpConnection
     /// <inheritdoc/>
     public event Action<string>? OnError;
 
-    private ConnectionStatus _status = ConnectionStatus.Disconnected;
     /// <inheritdoc/>
     public ConnectionStatus Status
     {
-        get => _status;
+        get;
         protected set
         {
-            if (_status != value)
-            {
-                _status = value;
-                OnStatusChanged?.Invoke(_status);
-            }
+            if (field == value) return;
+            field = value;
+            OnStatusChanged?.Invoke(field);
         }
-    }
+    } = ConnectionStatus.Disconnected;
 
     /// <summary>
     /// Invokes the <see cref="OnLog"/> event with the specified message.
@@ -74,7 +71,7 @@ public abstract class TcpConnectionBase : ITcpConnection
             };
 
             stream.Write(data, 0, data.Length);
-            string hexDump = DataUtils.ToHexDump(data, 0, data.Length);
+            var hexDump = DataUtils.ToHexDump(data, 0, data.Length);
             Log($"Sent ({tx.Encoding}) {data.Length} bytes:\n{hexDump}");
         }
         catch (Exception ex)
@@ -89,30 +86,30 @@ public abstract class TcpConnectionBase : ITcpConnection
     /// <param name="stream">The network stream to read from.</param>
     /// <param name="token">A cancellation token to stop the loop.</param>
     /// <param name="onDataReceived">A callback invoked when data is received.</param>
-    protected void HandleIncomingData(NetworkStream stream, CancellationToken token, Action<byte[], int> onDataReceived)
+    protected async Task HandleIncomingDataAsync(NetworkStream stream, CancellationToken token, Action<byte[], int> onDataReceived)
     {
         byte[] buffer = new byte[4096];
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                if (stream.DataAvailable)
-                {
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) break;
 
-                    onDataReceived(buffer, bytesRead);
-                }
-                else
-                {
-                    Thread.Sleep(50);
-                }
-            }
-            catch (Exception ex) when (!token.IsCancellationRequested)
+        try
+        {
+            while (!token.IsCancellationRequested)
             {
-                Log($"Read error: {ex.Message}");
-                break;
+                var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+
+                onDataReceived(buffer, bytesRead);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal shutdown path.
+        }
+        catch (Exception ex) when (!token.IsCancellationRequested)
+        {
+            Log($"Read error: {ex.Message}");
         }
     }
 }

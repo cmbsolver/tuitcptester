@@ -1,13 +1,12 @@
 using System.Net.Sockets;
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace tuitcptester.Logic;
 
 /// <summary>
 /// Provides utility methods for scanning TCP ports.
 /// </summary>
-public class PortScanner
+public static class PortScanner
 {
     /// <summary>
     /// Represents the result of a single port scan operation.
@@ -78,7 +77,7 @@ public class PortScanner
     /// <returns>A string describing the common service on that port, or "Unknown Service".</returns>
     public static string GetPortDescription(int port)
     {
-        return CommonPorts.TryGetValue(port, out var description) ? description : "Unknown Service";
+        return CommonPorts.GetValueOrDefault(port, "Unknown Service");
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
-using Terminal.Gui;
+using Terminal.Gui.Views;
 using System.Text.Json;
 using tuitcptester.Models;
-using tuitcptester.Logic;
+using tuitcptester.ViewModels;
 
 namespace tuitcptester.UI;
 
@@ -19,16 +19,16 @@ public sealed partial class MainView
         };
         dialog.Path = "config.json";
 
-        Application.Run(dialog);
+        _app.Run(dialog);
 
-        if (dialog.Path == null || dialog.Canceled) return;
-        var path = dialog.Path.ToString();
+        if (dialog.Canceled) return;
+        var path = dialog.Path;
         if (string.IsNullOrEmpty(path)) return;
 
         var configs = _viewModel.Instances.Select(i => i.Config).ToList();
         var json = JsonSerializer.Serialize(new AppConfig { Connections = configs }, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json);
-        MessageBox.Query("Save", $"Configuration saved to {Path.GetFileName(path)}", "Ok");
+        MessageBox.Query(_app, "Save", $"Configuration saved to {Path.GetFileName(path)}", "Ok");
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed partial class MainView
         dialog.AllowsMultipleSelection = false;
         dialog.OpenMode = OpenMode.File;
 
-        Application.Run(dialog);
+        _app.Run(dialog);
 
         if (dialog.Canceled || dialog.FilePaths.Count <= 0) return;
         var path = dialog.FilePaths[0];
@@ -63,7 +63,7 @@ public sealed partial class MainView
         }
         catch (Exception ex)
         {
-            MessageBox.ErrorQuery("Error", $"Failed to load config: {ex.Message}", "Ok");
+            MessageBox.ErrorQuery(_app, "Error", $"Failed to load config: {ex.Message}", "Ok");
         }
     }
 
@@ -74,7 +74,7 @@ public sealed partial class MainView
     {
         if (_viewModel.Logs.Count == 0)
         {
-            MessageBox.Query("Export", "No logs to export.", "Ok");
+            MessageBox.Query(_app, "Export", "No logs to export.", "Ok");
             return;
         }
 
@@ -85,20 +85,20 @@ public sealed partial class MainView
         };
         dialog.Path = "logs.txt";
 
-        Application.Run(dialog);
+        _app.Run(dialog);
 
-        if (dialog.Path == null || dialog.Canceled) return;
-        var path = dialog.Path.ToString();
+        if (dialog.Canceled) return;
+        var path = dialog.Path;
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
-            File.WriteAllLines(path, _viewModel.Logs);
-            MessageBox.Query("Export", $"Logs exported to {Path.GetFileName(path)}", "Ok");
+            File.WriteAllLines(path, _viewModel.Logs.Select(MainViewModel.FormatLogEntry));
+            MessageBox.Query(_app, "Export", $"Logs exported to {Path.GetFileName(path)}", "Ok");
         }
         catch (Exception ex)
         {
-            MessageBox.ErrorQuery("Export Error", ex.Message, "Ok");
+            MessageBox.ErrorQuery(_app, "Export Error", ex.Message, "Ok");
         }
     }
 }

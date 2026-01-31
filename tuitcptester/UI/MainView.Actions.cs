@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
-using Terminal.Gui;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Editor;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using tuitcptester.Logic;
 using tuitcptester.Models;
+using Attribute = Terminal.Gui.Drawing.Attribute;
 
 namespace tuitcptester.UI;
 
@@ -14,56 +18,58 @@ public sealed partial class MainView
     {
         if (!_viewModel.Instances.Any())
         {
-            MessageBox.ErrorQuery("Send Message", "No connections exist. Please create a server or client first.",
+            MessageBox.ErrorQuery(_app, "Send Message", "No connections exist. Please create a server or client first.",
                 "Ok");
             return;
         }
 
         if (_selectedInstance == null)
         {
-            MessageBox.ErrorQuery("Send Message", "Please select a connection from the list.", "Ok");
+            MessageBox.ErrorQuery(_app, "Send Message", "Please select a connection from the list.", "Ok");
             return;
         }
 
         if (_selectedInstance.Status != ConnectionStatus.Connected &&
             _selectedInstance.Config.Type == ConnectionType.Client)
         {
-            MessageBox.ErrorQuery("Send Message", "Client is not connected.", "Ok");
+            MessageBox.ErrorQuery(_app, "Send Message", "Client is not connected.", "Ok");
             return;
         }
 
         var dataLabel = new Label { Text = "Data (Hex/Base64/ASCII):", X = 1, Y = 1 };
-        var dataField = new TextField { Text = "", X = 1, Y = 2, Width = Dim.Fill()! - 2 };
+        var dataField = new TextField { Text = "", X = 1, Y = 2, Width = Dim.Fill() - 2 };
 
         var encodingLabel = new Label { Text = "Encoding:", X = 1, Y = 4 };
-        var encodingGroup = new RadioGroup
+        var encodingGroup = new OptionSelector
         {
             X = 1, Y = 5,
-            RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
+            Labels = ["ASCII", "Hex", "Binary (Base64)"]
         };
 
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 8 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 9 };
 
-        var hintLabel = new Label { Text = "Press ESC to Cancel", X = 1, Y = 11, ColorScheme = ColorScheme };
+        var hintLabel = new Label { Text = "Press ESC to Cancel", X = 1, Y = 11 };
+        hintLabel.SetScheme(this.GetScheme());
 
-        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 16, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Manual Send", Width = 60, Height = 16 };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(dataLabel, dataField, encodingLabel, encodingGroup, returnCheckbox, newlineCheckbox, hintLabel);
 
         var sendBtn = new Button { Text = "Send", IsDefault = true };
 
         bool sendClicked = false;
 
-        sendBtn.Accepting += (s, e) =>
+        sendBtn.Accepting += (_,_) =>
         {
             sendClicked = true;
-            Application.RequestStop();
+            _app.RequestStop();
         };
 
         dialog.AddButton(sendBtn);
 
         // Run the dialog modally
-        Application.Run(dialog);
+        _app.Run(dialog);
 
         // If the user closed the dialog via Escape or the Cancel button, 
         // sendClicked will be false.
@@ -72,9 +78,9 @@ public sealed partial class MainView
             var tx = new Transaction
             {
                 Data = dataField.Text,
-                Encoding = (TransactionEncoding)encodingGroup.SelectedItem,
-                AppendReturn = returnCheckbox.CheckedState == CheckState.Checked,
-                AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
+                Encoding = (TransactionEncoding)encodingGroup.Value!,
+                AppendReturn = returnCheckbox.Value == CheckState.Checked,
+                AppendNewline = newlineCheckbox.Value == CheckState.Checked
             };
 
             _selectedInstance.SendManual(tx);
@@ -99,22 +105,23 @@ public sealed partial class MainView
             ipAddresses.Add("No active IP addresses found.");
         }
 
-        var dialog = new Dialog { Title = "Machine IP Addresses", Width = 60, Height = 12, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Machine IP Addresses", Width = 60, Height = 12 };
+        dialog.SetScheme(GetScheme());
         var list = new ListView
         {
             Source = new ListWrapper<string>(ipAddresses),
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill()! - 1
+            Height = Dim.Fill() - 1
         };
         dialog.Add(list);
 
         var okBtn = new Button { Text = "Ok", IsDefault = true };
-        okBtn.Accepting += (s, e) => Application.RequestStop();
+        okBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(okBtn);
 
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
     /// <summary>
@@ -132,7 +139,7 @@ public sealed partial class MainView
         }
         catch (Exception ex)
         {
-            MessageBox.ErrorQuery("Start Error", ex.Message, "Ok");
+            MessageBox.ErrorQuery(_app, "Start Error", ex.Message, "Ok");
         }
     }
 
@@ -151,33 +158,34 @@ public sealed partial class MainView
     {
         var hostField = new TextField { Text = "127.0.0.1", X = 13, Y = 1, Width = 30 };
         var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 3 };
-        var logFileField = new TextField { Text = "", X = 1, Y = 4, Width = Dim.Fill()! - 12 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 4, Width = Dim.Fill() - 12 };
         var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 4 };
-        logFileBrowseBtn.Accepting += (s, e) => {
+        logFileBrowseBtn.Accepting += (_,_) => {
             var saveDialog = new SaveDialog { Title = "Select Log File" };
-            Application.Run(saveDialog);
-            if (!saveDialog.Canceled && saveDialog.Path != null) {
-                logFileField.Text = saveDialog.Path.ToString();
+            _app.Run(saveDialog);
+            if (!saveDialog.Canceled) {
+                logFileField.Text = saveDialog.Path;
             }
         };
 
-        var dialog = new Dialog { Title = "Ping IP", Width = 50, Height = 10, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Ping IP", Width = 50, Height = 10 };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(
             new Label { Text = "IP Address:", X = 1, Y = 1 }, hostField,
             logFileLabel, logFileField, logFileBrowseBtn
         );
 
         var pingBtn = new Button { Text = "Ping", IsDefault = true };
-        pingBtn.Accepting += (s, e) =>
+        pingBtn.Accepting += (_,_) =>
         {
-            string host = hostField.Text;
-            string logFilePath = logFileField.Text.ToString();
+            var host = hostField.Text;
+            var logFilePath = logFileField.Text;
             Task.Run(() =>
             {
                 try
                 {
                     var ping = new System.Net.NetworkInformation.Ping();
-                    var results = new System.Collections.Generic.List<string>();
+                    var results = new List<string>();
                     for (int i = 0; i < 10; i++)
                     {
                         var reply = ping.Send(host);
@@ -195,20 +203,20 @@ public sealed partial class MainView
                     }
 
                     string summary = string.Join("\n", results);
-                    Application.Invoke(() => MessageBox.Query("Ping Results", summary, "Ok"));
+                    _app.Invoke(() => MessageBox.Query(_app, "Ping Results", summary, "Ok"));
                 }
                 catch (Exception ex)
                 {
-                    Application.Invoke(() => MessageBox.ErrorQuery("Ping Error", ex.Message, "Ok"));
+                    _app.Invoke(() => MessageBox.ErrorQuery(_app, "Ping Error", ex.Message, "Ok"));
                 }
             });
-            Application.RequestStop();
+            _app.RequestStop();
         };
         dialog.AddButton(pingBtn);
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
     /// <summary>
@@ -220,16 +228,17 @@ public sealed partial class MainView
         var startPortField = new TextField { Text = "1", X = 13, Y = 2, Width = 10 };
         var endPortField = new TextField { Text = "65535", X = 13, Y = 3, Width = 10 };
 
-        var dialog = new Dialog { Title = "Port Scan", Width = 50, Height = 17, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Port Scan", Width = 50, Height = 17 };
+        dialog.SetScheme(GetScheme());
 
         var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 5 };
-        var logFileField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill()! - 12 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill() - 12 };
         var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 6 };
-        logFileBrowseBtn.Accepting += (s, e) => {
+        logFileBrowseBtn.Accepting += (_,_) => {
             var saveDialog = new SaveDialog { Title = "Select Log File" };
-            Application.Run(saveDialog);
-            if (!saveDialog.Canceled && saveDialog.Path != null) {
-                logFileField.Text = saveDialog.Path.ToString();
+            _app.Run(saveDialog);
+            if (saveDialog is { Canceled: false, Path: not null }) {
+                logFileField.Text = saveDialog.Path;
             }
         };
 
@@ -244,17 +253,17 @@ public sealed partial class MainView
         scanBtn.Accepting += (s, e) =>
         {
             string host = hostField.Text;
-            string logFilePath = logFileField.Text.ToString();
+            string logFilePath = logFileField.Text;
             if (!int.TryParse(startPortField.Text, out int startPort) ||
                 !int.TryParse(endPortField.Text, out int endPort))
             {
-                MessageBox.ErrorQuery("Input Error", "Invalid port range.", "Ok");
+                MessageBox.ErrorQuery(_app, "Input Error", "Invalid port range.", "Ok");
                 return;
             }
 
             if (startPort > endPort || startPort < 1 || endPort > 65535)
             {
-                MessageBox.ErrorQuery("Input Error", "Ports must be between 1 and 65535, and Start <= End.", "Ok");
+                MessageBox.ErrorQuery(_app, "Input Error", "Ports must be between 1 and 65535, and Start <= End.", "Ok");
                 return;
             }
 
@@ -266,7 +275,12 @@ public sealed partial class MainView
                     void Log(string msg)
                     {
                         var timestamp = DateTime.Now;
-                        Application.Invoke(() => _viewModel.AddLog($"[{timestamp:HH:mm:ss}] [Scanner] {msg}"));
+                        _app.Invoke(() => _viewModel.AddLog(new LogEntry
+                        {
+                            Timestamp = timestamp,
+                            ConnectionName = "Scanner",
+                            Message = msg
+                        }));
 
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
@@ -292,27 +306,27 @@ public sealed partial class MainView
 
                     if (openPorts.Count != 0)
                     {
-                        Application.Invoke(() => MessageBox.Query("Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok"));
+                        _app.Invoke(() => MessageBox.Query(_app, "Scan Results", $"Open ports on {host}:\n{string.Join(", ", openPorts)}\n\nResults also logged to the log area.", "Ok"));
                     }
                     else
                     {
                         Log($"No open ports found on {host} in range {startPort}-{endPort}");
-                        Application.Invoke(() => MessageBox.Query("Scan Results", $"No open ports found on {host} in range {startPort}-{endPort}.", "Ok"));
+                        _app.Invoke(() => MessageBox.Query(_app, "Scan Results", $"No open ports found on {host} in range {startPort}-{endPort}.", "Ok"));
                     }
                 }
                 catch (Exception ex)
                 {
-                    Application.Invoke(() => MessageBox.ErrorQuery("Scan Error", ex.Message, "Ok"));
+                    _app.Invoke(() => MessageBox.ErrorQuery(_app, "Scan Error", ex.Message, "Ok"));
                 }
             });
-            Application.RequestStop();
+            _app.RequestStop();
         };
 
         dialog.AddButton(scanBtn);
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
 
@@ -326,30 +340,31 @@ public sealed partial class MainView
         var endPortField = new TextField { Text = "65535", X = 15, Y = 3, Width = 10 };
         
         var dataLabel = new Label { Text = "Data (Hex/Base64/ASCII):", X = 1, Y = 5 };
-        var dataField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill()! - 2 };
+        var dataField = new TextField { Text = "", X = 1, Y = 6, Width = Dim.Fill() - 2 };
 
         var encodingLabel = new Label { Text = "Encoding:", X = 1, Y = 8 };
-        var encodingGroup = new RadioGroup
+        var encodingGroup = new OptionSelector
         {
             X = 1, Y = 9,
-            RadioLabels = ["ASCII", "Hex", "Binary (Base64)"]
+            Labels = ["ASCII", "Hex", "Binary (Base64)"]
         };
 
         var returnCheckbox = new CheckBox { Text = "Append \\r (Return)", X = 1, Y = 12 };
         var newlineCheckbox = new CheckBox { Text = "Append \\n (Newline)", X = 1, Y = 13 };
 
         var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 15 };
-        var logFileField = new TextField { Text = "", X = 1, Y = 16, Width = Dim.Fill()! - 12 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 16, Width = Dim.Fill() - 12 };
         var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 16 };
-        logFileBrowseBtn.Accepting += (s, e) => {
+        logFileBrowseBtn.Accepting += (_,_) => {
             var saveDialog = new SaveDialog { Title = "Select Log File" };
-            Application.Run(saveDialog);
-            if (!saveDialog.Canceled && saveDialog.Path != null) {
-                logFileField.Text = saveDialog.Path.ToString();
+            _app.Run(saveDialog);
+            if (saveDialog is { Canceled: false, Path: not null }) {
+                logFileField.Text = saveDialog.Path;
             }
         };
 
-        var dialog = new Dialog { Title = "Port Transaction Scan", Width = 60, Height = 21, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Port Transaction Scan", Width = 60, Height = 21 };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(
             new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
             new Label { Text = "Start Port:", X = 1, Y = 2 }, startPortField,
@@ -362,20 +377,20 @@ public sealed partial class MainView
         runBtn.Accepting += (s, e) =>
         {
             string host = hostField.Text;
-            string logFilePath = logFileField.Text.ToString();
+            string logFilePath = logFileField.Text;
             if (!int.TryParse(startPortField.Text, out int startPort) ||
                 !int.TryParse(endPortField.Text, out int endPort))
             {
-                MessageBox.ErrorQuery("Input Error", "Invalid port range.", "Ok");
+                MessageBox.ErrorQuery(_app, "Input Error", "Invalid port range.", "Ok");
                 return;
             }
 
             var tx = new Transaction
             {
                 Data = dataField.Text,
-                Encoding = (TransactionEncoding)encodingGroup.SelectedItem,
-                AppendReturn = returnCheckbox.CheckedState == CheckState.Checked,
-                AppendNewline = newlineCheckbox.CheckedState == CheckState.Checked
+                Encoding = (TransactionEncoding)encodingGroup.Value!,
+                AppendReturn = returnCheckbox.Value == CheckState.Checked,
+                AppendNewline = newlineCheckbox.Value == CheckState.Checked
             };
 
             _ = Task.Run(async () =>
@@ -385,8 +400,12 @@ public sealed partial class MainView
                     void Log(string msg)
                     {
                         var timestamp = DateTime.Now;
-                        var formattedMsg = $"[{timestamp:HH:mm:ss}] {msg}";
-                        Application.Invoke(() => _viewModel.AddLog(formattedMsg));
+                        _app.Invoke(() => _viewModel.AddLog(new LogEntry
+                        {
+                            Timestamp = timestamp,
+                            ConnectionName = "PortTxScan",
+                            Message = msg
+                        }));
                         if (!string.IsNullOrWhiteSpace(logFilePath))
                         {
                             try
@@ -421,7 +440,7 @@ public sealed partial class MainView
                                 stream.WriteTimeout = 1000;
 
                                 // Prepare data
-                                string dataToSend = tx.Data;
+                                var dataToSend = tx.Data;
                                 if (tx.AppendReturn) dataToSend += "\r";
                                 if (tx.AppendNewline) dataToSend += "\n";
 
@@ -453,11 +472,11 @@ public sealed partial class MainView
                                 var readCompletedTask = await Task.WhenAny(readTask, readDelayTask);
                                 if (readCompletedTask == readTask)
                                 {
-                                    int bytesRead = await readTask;
+                                    var bytesRead = await readTask;
                                     if (bytesRead > 0)
                                     {
-                                        string responseHex = DataUtils.ToHexString(readBuffer, 0, bytesRead);
-                                        string responseAscii = System.Text.Encoding.ASCII.GetString(readBuffer, 0, bytesRead)
+                                        var responseHex = DataUtils.ToHexString(readBuffer, 0, bytesRead);
+                                        var responseAscii = System.Text.Encoding.ASCII.GetString(readBuffer, 0, bytesRead)
                                             .Replace("\r", "\\r").Replace("\n", "\\n");
                                         Log($"Port {currentPort} Response (ASCII): {responseAscii}");
                                         Log($"Port {currentPort} Response (Hex): {responseHex}");
@@ -487,17 +506,17 @@ public sealed partial class MainView
                 }
                 catch (Exception ex)
                 {
-                    Application.Invoke(() => MessageBox.ErrorQuery("Scan Error", ex.Message, "Ok"));
+                    _app.Invoke(() => MessageBox.ErrorQuery(_app, "Scan Error", ex.Message, "Ok"));
                 }
             });
-            Application.RequestStop();
+            _app.RequestStop();
         };
 
         dialog.AddButton(runBtn);
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
 
@@ -508,22 +527,23 @@ public sealed partial class MainView
     {
         var hostField = new TextField { Text = "127.0.0.1", X = 15, Y = 1, Width = 30 };
         var portField = new TextField { Text = "80", X = 15, Y = 2, Width = 10 };
-        var hexField = new TextField { Text = "48454c4c4f", X = 15, Y = 3, Width = Dim.Fill()! - 2 };
+        var hexField = new TextField { Text = "48454c4c4f", X = 15, Y = 3, Width = Dim.Fill() - 2 };
         var iterationsField = new TextField { Text = "1", X = 15, Y = 4, Width = 10 };
         var delayField = new TextField { Text = "100", X = 15, Y = 5, Width = 10 };
 
         var logFileLabel = new Label { Text = "Log to File:", X = 1, Y = 7 };
-        var logFileField = new TextField { Text = "", X = 1, Y = 8, Width = Dim.Fill()! - 12 };
+        var logFileField = new TextField { Text = "", X = 1, Y = 8, Width = Dim.Fill() - 12 };
         var logFileBrowseBtn = new Button { Text = "Browse", X = Pos.Right(logFileField) + 1, Y = 8 };
-        logFileBrowseBtn.Accepting += (s, e) => {
+        logFileBrowseBtn.Accepting += (_,_) => {
             var saveDialog = new SaveDialog { Title = "Select Log File" };
-            Application.Run(saveDialog);
-            if (!saveDialog.Canceled && saveDialog.Path != null) {
-                logFileField.Text = saveDialog.Path.ToString();
+            _app.Run(saveDialog);
+            if (saveDialog is { Canceled: false, Path: not null }) {
+                logFileField.Text = saveDialog.Path;
             }
         };
 
-        var dialog = new Dialog { Title = "Packet Generator", Width = 60, Height = 13, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "Packet Generator", Width = 60, Height = 13 };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(
             new Label { Text = "Host:", X = 1, Y = 1 }, hostField,
             new Label { Text = "Port:", X = 1, Y = 2 }, portField,
@@ -536,14 +556,14 @@ public sealed partial class MainView
         var runBtn = new Button { Text = "Run", IsDefault = true };
         runBtn.Accepting += (s, e) =>
         {
-            string host = hostField.Text;
-            string hex = hexField.Text;
-            string logFilePath = logFileField.Text.ToString();
+            var host = hostField.Text;
+            var hex = hexField.Text;
+            var logFilePath = logFileField.Text;
             if (!int.TryParse(portField.Text, out int port) ||
                 !int.TryParse(iterationsField.Text, out int iterations) ||
                 !int.TryParse(delayField.Text, out int delay))
             {
-                MessageBox.ErrorQuery("Input Error", "Invalid port, iterations, or delay.", "Ok");
+                MessageBox.ErrorQuery(_app, "Input Error", "Invalid port, iterations, or delay.", "Ok");
                 return;
             }
 
@@ -552,29 +572,32 @@ public sealed partial class MainView
                 await PacketGenerator.RunAsync(host, port, hex, iterations, delay, (msg) =>
                 {
                     var timestamp = DateTime.Now;
-                    Application.Invoke(() => _viewModel.AddLog($"[{timestamp:HH:mm:ss}] {msg}"));
-
-                    if (!string.IsNullOrWhiteSpace(logFilePath))
+                    _app.Invoke(() => _viewModel.AddLog(new LogEntry
                     {
-                        try
-                        {
-                            File.AppendAllText(logFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}");
-                        }
-                        catch
-                        {
-                            // Ignore file write errors
-                        }
+                        Timestamp = timestamp,
+                        ConnectionName = "PacketGen",
+                        Message = msg
+                    }));
+
+                    if (string.IsNullOrWhiteSpace(logFilePath)) return;
+                    try
+                    {
+                        File.AppendAllText(logFilePath, $"[{timestamp:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}");
+                    }
+                    catch
+                    {
+                        // Ignore file write errors
                     }
                 });
             });
-            Application.RequestStop();
+            _app.RequestStop();
         };
 
         dialog.AddButton(runBtn);
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
     /// <summary>
@@ -583,13 +606,14 @@ public sealed partial class MainView
     private void OnDnsLookup()
     {
         var queryField = new TextField { Text = "google.com", X = 13, Y = 1, Width = 30 };
-        var dialog = new Dialog { Title = "DNS Lookup", Width = 50, Height = 10, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "DNS Lookup", Width = 50, Height = 10 };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(new Label { Text = "Host/IP:", X = 1, Y = 1 }, queryField);
 
         var resolveBtn = new Button { Text = "Resolve", IsDefault = true };
         resolveBtn.Accepting += (s, e) =>
         {
-            string query = queryField.Text;
+            var query = queryField.Text;
             Task.Run(async () =>
             {
                 try
@@ -608,21 +632,21 @@ public sealed partial class MainView
                             : "Could not resolve hostname.";
                     }
 
-                    Application.Invoke(() => MessageBox.Query("DNS Results", result, "Ok"));
+                    _app.Invoke(() => MessageBox.Query(_app, "DNS Results", result, "Ok"));
                 }
                 catch (Exception ex)
                 {
-                    Application.Invoke(() => MessageBox.ErrorQuery("DNS Error", ex.Message, "Ok"));
+                    _app.Invoke(() => MessageBox.ErrorQuery(_app, "DNS Error", ex.Message, "Ok"));
                 }
             });
-            Application.RequestStop();
+            _app.RequestStop();
         };
 
         dialog.AddButton(resolveBtn);
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
     /// <summary>
@@ -660,30 +684,28 @@ public sealed partial class MainView
     {
         if (_selectedInstance == null)
         {
-            MessageBox.ErrorQuery("Load Transactions", "No connection selected.", "Ok");
+            MessageBox.ErrorQuery(_app, "Load Transactions", "No connection selected.", "Ok");
             return;
         }
 
         var autoTxLabel = new Label { Text = "Transactions (one per line):", X = 1, Y = 1 };
-        var autoTxField = new TextView { 
+        var autoTxField = new Editor { 
             X = 1, Y = 2, 
-            Width = Dim.Fill()! - 2, Height = 8,
+            Width = Dim.Fill() - 2, Height = 8,
             Text = string.Join("\n", _selectedInstance.Config.AutoTransactions.Select(t => t.Data))
         };
 
         var loadFileBtn = new Button { Text = "Load from File", X = 1, Y = 11 };
-        loadFileBtn.Accepting += (s, e) => {
+        loadFileBtn.Accepting += (_,_) => {
             var fileDialog = new OpenDialog { Title = "Load Transactions" };
-            Application.Run(fileDialog);
-            if (!fileDialog.Canceled && fileDialog.FilePaths.Count > 0)
-            {
-                var path = fileDialog.FilePaths[0];
-                try {
-                    var content = File.ReadAllText(path);
-                    autoTxField.Text = content;
-                } catch (Exception ex) {
-                    MessageBox.ErrorQuery("Load Error", $"Could not load file: {ex.Message}", "Ok");
-                }
+            _app.Run(fileDialog);
+            if (fileDialog is not { Canceled: false, FilePaths.Count: > 0 }) return;
+            var path = fileDialog.FilePaths[0];
+            try {
+                var content = File.ReadAllText(path);
+                autoTxField.Text = content;
+            } catch (Exception ex) {
+                MessageBox.ErrorQuery(_app, "Load Error", $"Could not load file: {ex.Message}", "Ok");
             }
         };
 
@@ -705,31 +727,31 @@ public sealed partial class MainView
 
         var dialog = new Dialog {
             Title = "Load Transactions",
-            Width = 60, Height = 20,
-            ColorScheme = ColorScheme
+            Width = 60, Height = 20
         };
+        dialog.SetScheme(this.GetScheme());
         dialog.Add(autoTxLabel, autoTxField, loadFileBtn, intervalLabel, intervalField, jitterLabel, jitterMinField, jitterMaxField);
 
         var updateBtn = new Button { Text = "Update", IsDefault = true };
-        updateBtn.Accepting += (s, e) => {
-            var lines = autoTxField.Text.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        updateBtn.Accepting += (_,_) => {
+            var lines = autoTxField.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var transactions = lines.Select(line => new Transaction { Data = line, Encoding = TransactionEncoding.Ascii }).ToList();
 
-            int? interval = int.TryParse(intervalField.Text.ToString(), out int i) ? i : null;
-            int? jitterMin = int.TryParse(jitterMinField.Text.ToString(), out int jmin) ? jmin : null;
-            int? jitterMax = int.TryParse(jitterMaxField.Text.ToString(), out int jmax) ? jmax : null;
+            int? interval = int.TryParse(intervalField.Text, out var i) ? i : null;
+            int? jitterMin = int.TryParse(jitterMinField.Text, out var jmin) ? jmin : null;
+            int? jitterMax = int.TryParse(jitterMaxField.Text, out var jmax) ? jmax : null;
 
             _selectedInstance.UpdateAutoTransactions(transactions, interval, jitterMin, jitterMax);
             UpdateDetails();
-            Application.RequestStop();
+            _app.RequestStop();
         };
         dialog.AddButton(updateBtn);
 
         var cancelBtn = new Button { Text = "Cancel" };
-        cancelBtn.Accepting += (s, e) => Application.RequestStop();
+        cancelBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(cancelBtn);
 
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 
     /// <summary>
@@ -745,7 +767,8 @@ public sealed partial class MainView
     /// </summary>
     private void OnAbout()
     {
-        var dialog = new Dialog { Title = "About TUI TCP Tester", Width = 60, Height = 10, ColorScheme = ColorScheme };
+        var dialog = new Dialog { Title = "About TUI TCP Tester", Width = 60, Height = 10 };
+        dialog.SetScheme(this.GetScheme());
 
         var blurb = new Label
         {
@@ -755,24 +778,24 @@ public sealed partial class MainView
             TextAlignment = Alignment.Center
         };
 
-        if (ColorScheme != null)
+        if (GetScheme() != null)
         {
             var link = new Label
             {
                 Text = "https://github.com/cmbsolver/tuitcptester",
                 X = Pos.Center(),
-                Y = 4,
-                ColorScheme = new ColorScheme
-                    { Normal = new Terminal.Gui.Attribute(Color.BrightBlue, ColorScheme.Normal.Background) }
+                Y = 4
             };
+                link.SetScheme(new Scheme
+                { Normal = new Attribute(Color.BrightBlue, GetScheme().Normal.Background) });
 
             dialog.Add(blurb, link);
         }
 
         var okBtn = new Button { Text = "Ok", IsDefault = true };
-        okBtn.Accepting += (s, e) => Application.RequestStop();
+        okBtn.Accepting += (_,_) => _app.RequestStop();
         dialog.AddButton(okBtn);
 
-        Application.Run(dialog);
+        _app.Run(dialog);
     }
 }

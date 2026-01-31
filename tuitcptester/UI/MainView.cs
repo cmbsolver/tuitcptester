@@ -1,66 +1,51 @@
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Editor;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using tuitcptester.Logic;
-using System.Collections.ObjectModel;
+using Terminal.Gui.Views;
 using tuitcptester.ViewModels;
-using Attribute = Terminal.Gui.Attribute;
 
 namespace tuitcptester.UI;
 
 /// <summary>
 /// The main user interface for the TCP Test Tool, using Terminal.Gui.
 /// </summary>
-public sealed partial class MainView : Toplevel
+public sealed partial class MainView : Window
 {
+    /// <summary>
+    /// The application's interface
+    /// </summary>
+    private readonly IApplication _app;
+    
     /// <summary>
     /// The view model that holds the application's state and logic.
     /// </summary>
     private readonly MainViewModel _viewModel;
 
-    /// <summary>
-    /// The top-level menu bar for the application.
-    /// </summary>
-    private MenuBar _menu;
-
-    /// <summary>
-    /// The list view displaying active and configured connections.
-    /// </summary>
-    private ListView _connectionList;
 
     /// <summary>
     /// The text view displaying details for the selected connection.
     /// </summary>
-    private TextView _detailsView;
+    private readonly Editor _detailsView;
 
-    /// <summary>
-    /// The list view displaying log messages.
-    /// </summary>
-    private ListView _logView;
 
     /// <summary>
     /// The currently selected TCP connection instance, if any.
     /// </summary>
     private TcpInstance? _selectedInstance;
-
-    /// <summary>
-    /// A custom color scheme inspired by classic "green screen" terminals.
-    /// </summary>
-    private static readonly ColorScheme GreenScreen = new ColorScheme
-    {
-        Normal = new Attribute(Color.Green, Color.Black),
-        Focus = new Attribute(Color.Black, Color.Green),
-        HotNormal = new Attribute(Color.BrightGreen, Color.Black),
-        HotFocus = new Attribute(Color.BrightGreen, Color.Green)
-    };
-
+    
     /// <summary>
     /// Initializes a new instance of the <see cref="MainView"/> class and sets up the UI components.
     /// </summary>
-    public MainView()
+    public MainView(IApplication app)
     {
+        _app = app;
         _viewModel = new MainViewModel();
         Title = "TCP Test Tool";
 
-        _menu = new MenuBar
+        var menu = new MenuBar
         {
             Menus =
             [
@@ -69,7 +54,7 @@ public sealed partial class MainView : Toplevel
                     new("_Save Configuration", "", OnSaveConfig),
                     new("_Load Configuration", "", OnLoadConfig),
                     new("_Export Logs", "", OnExportLogs),
-                    new("_Quit", "Ctrl+Q", () => Application.RequestStop())
+                    new("_Quit", "Ctrl+Q", app.RequestStop)
                 }),
                 new MenuBarItem("_New", new MenuItem[]
                 {
@@ -109,24 +94,24 @@ public sealed partial class MainView : Toplevel
             X = 0, Y = 1, Width = Dim.Percent(50), Height = Dim.Percent(50)
         };
 
-        _connectionList = new ListView
+        var connectionList = new ListView
         {
             Source = new ListWrapper<TcpInstance>(_viewModel.Instances),
             Width = Dim.Fill(), Height = Dim.Fill()
         };
-        _connectionList.SelectedItemChanged += (s, e) =>
+        connectionList.ValueChanged += (_, e) =>
         {
-            _selectedInstance = _viewModel.Instances.Count > e.Item ? _viewModel.Instances[e.Item] : null;
+            _selectedInstance = _viewModel.Instances[e.NewValue ?? 0];
             UpdateDetails();
         };
-        topHalf.Add(_connectionList);
+        topHalf.Add(connectionList);
 
         var detailsFrame = new FrameView
         {
             Title = "Details",
             X = Pos.Right(topHalf), Y = 1, Width = Dim.Fill(), Height = Dim.Percent(50)
         };
-        _detailsView = new TextView
+        _detailsView = new Editor
         {
             Width = Dim.Fill(), Height = Dim.Fill(), ReadOnly = true
         };
@@ -137,29 +122,35 @@ public sealed partial class MainView : Toplevel
             Title = "Logs",
             X = 0, Y = Pos.Bottom(topHalf), Width = Dim.Fill(), Height = Dim.Fill()
         };
-        _logView = new ListView
+        var logView = new ListView
         {
-            Source = new ListWrapper<string>(_viewModel.Logs),
+            Source = new ListWrapper<LogEntry>(_viewModel.Logs),
             Width = Dim.Fill(), Height = Dim.Fill()
         };
-        _logView.OpenSelectedItem += (s, e) =>
+        logView.ValueChanged += (_, e) =>
         {
-            var log = _viewModel.Logs[e.Item];
-            MessageBox.Query("Log Entry", log, "Ok");
-        };
-        bottomHalf.Add(_logView);
+            if (_viewModel.Logs.Count == 0)
+            {
+                return;
+            }
 
-        Add(_menu, topHalf, detailsFrame, bottomHalf);
+            var index = Math.Clamp(e.NewValue ?? 0, 0, _viewModel.Logs.Count - 1);
+            var log = _viewModel.Logs[index];
+            MessageBox.Query(_app, "Log Entry", MainViewModel.FormatLogEntry(log), "Ok");
+        };
+        bottomHalf.Add(logView);
+
+        Add(menu, topHalf, detailsFrame, bottomHalf);
 
         // Set the default theme to Green Screen
-        ColorScheme = GreenScreen;
-        foreach (var view in Subviews)
+        this.SetScheme(Themes.GreenScreen);
+        foreach (var view in SubViews)
         {
-            view.ColorScheme = ColorScheme;
+            view.SetScheme(Themes.GreenScreen);
         }
 
         // Key bindings
-        KeyDown += (s, e) =>
+        KeyDown += (_, e) =>
         {
             if (e.KeyCode == Key.F2) OnNewServer();
             if (e.KeyCode == Key.F3) OnNewClient();
@@ -183,123 +174,19 @@ public sealed partial class MainView : Toplevel
     /// <returns>An array of <see cref="MenuItem"/> objects.</returns>
     private MenuItem[] CreateThemeMenuItems()
     {
-        var themes = new Dictionary<string, ColorScheme>
-        {
-            { "Green Screen (Default)", GreenScreen },
-            {
-                "Blue", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Gray, Color.Blue),
-                    Focus = new Attribute(Color.White, Color.DarkGray),
-                    HotNormal = new Attribute(Color.BrightCyan, Color.Blue),
-                    HotFocus = new Attribute(Color.BrightCyan, Color.DarkGray)
-                }
-            },
-            {
-                "Cyberpunk", new ColorScheme
-                {
-                    Normal = new Attribute(Color.BrightMagenta, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.BrightCyan),
-                    HotNormal = new Attribute(Color.Cyan, Color.Black),
-                    HotFocus = new Attribute(Color.Cyan, Color.BrightCyan)
-                }
-            },
-            {
-                "Cypherpunk", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Gray, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.BrightCyan),
-                    HotNormal = new Attribute(Color.BrightYellow, Color.Black),
-                    HotFocus = new Attribute(Color.BrightYellow, Color.BrightCyan)
-                }
-            },
-            {
-                "Cypherpunk (Neon Green)", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Gray, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.BrightGreen),
-                    HotNormal = new Attribute(Color.BrightGreen, Color.Black),
-                    HotFocus = new Attribute(Color.Black, Color.BrightGreen)
-                }
-            },
-            {
-                "Cypherpunk (Cool Blue CRT)", new ColorScheme
-                {
-                    Normal = new Attribute(Color.White, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.Cyan),
-                    HotNormal = new Attribute(Color.Cyan, Color.Black),
-                    HotFocus = new Attribute(Color.Black, Color.Cyan)
-                }
-            },
-            {
-                "Red Alert", new ColorScheme
-                {
-                    Normal = new Attribute(Color.White, Color.Red),
-                    Focus = new Attribute(Color.Black, Color.BrightRed),
-                    HotNormal = new Attribute(Color.Yellow, Color.Red),
-                    HotFocus = new Attribute(Color.Yellow, Color.BrightRed)
-                }
-            },
-            {
-                "Old Yeller", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Black, Color.BrightYellow),
-                    Focus = new Attribute(Color.White, Color.Black),
-                    HotNormal = new Attribute(Color.Black, Color.BrightYellow),
-                    HotFocus = new Attribute(Color.BrightYellow, Color.Black)
-                }
-            },
-            {
-                "Purple", new ColorScheme
-                {
-                    Normal = new Attribute(Color.White, Color.Magenta),
-                    Focus = new Attribute(Color.Black, Color.BrightMagenta),
-                    HotNormal = new Attribute(Color.Yellow, Color.Magenta),
-                    HotFocus = new Attribute(Color.Yellow, Color.BrightMagenta)
-                }
-            },
-            {
-                "Midnight", new ColorScheme
-                {
-                    Normal = new Attribute(Color.White, Color.Blue),
-                    Focus = new Attribute(Color.Blue, Color.BrightCyan),
-                    HotNormal = new Attribute(Color.BrightCyan, Color.Blue),
-                    HotFocus = new Attribute(Color.White, Color.BrightCyan)
-                }
-            },
-            {
-                "Matrix", new ColorScheme
-                {
-                    Normal = new Attribute(Color.BrightGreen, Color.Black),
-                    Focus = new Attribute(Color.Black, Color.Green),
-                    HotNormal = new Attribute(Color.Green, Color.Black),
-                    HotFocus = new Attribute(Color.BrightGreen, Color.Green)
-                }
-            },
-            {
-                "Solarized Dark", new ColorScheme
-                {
-                    Normal = new Attribute(Color.Gray, Color.Black),
-                    Focus = new Attribute(Color.White, Color.DarkGray),
-                    HotNormal = new Attribute(Color.BrightYellow, Color.Black),
-                    HotFocus = new Attribute(Color.BrightYellow, Color.DarkGray)
-                }
-            }
-        };
-
-        return themes.Select(kvp => new MenuItem(kvp.Key, "", () => ApplyTheme(kvp.Value))).ToArray();
+        return Themes.All.Select(kvp => new MenuItem(kvp.Key, "", () => ApplyTheme(kvp.Value))).ToArray();
     }
 
     /// <summary>
-    /// Applies the specified <see cref="ColorScheme"/> to the current view and all its subviews, ensuring that the layout reflects the changes.
+    /// Applies the specified <see cref="Scheme"/> to the current view and all its subviews, ensuring that the layout reflects the changes.
     /// </summary>
     /// <param name="scheme">The color scheme to apply to the UI components.</param>
-    private void ApplyTheme(ColorScheme scheme)
+    private void ApplyTheme(Scheme scheme)
     {
-        ColorScheme = scheme;
-        foreach (var view in Subviews)
+        SetScheme(scheme);
+        foreach (var view in SubViews)
         {
-            view.ColorScheme = scheme;
+            view.SetScheme(scheme);
             view.SetNeedsLayout();
         }
 

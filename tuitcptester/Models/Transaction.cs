@@ -8,20 +8,20 @@ public class Transaction
     /// <summary>
     /// Gets or sets the data to be sent.
     /// </summary>
-    public string Data { get; set; } = string.Empty;
+    public string Data { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the encoding used for the data.
     /// </summary>
-    public TransactionEncoding Encoding { get; set; } = TransactionEncoding.Ascii;
+    public TransactionEncoding Encoding { get; init; } = TransactionEncoding.Ascii;
 
     /// <summary>
     /// Gets or sets whether to append a carriage return (\r) to the data.
     /// </summary>
-    public bool AppendReturn { get; set; }
+    public bool AppendReturn { get; init; }
 
     /// <summary>
     /// Gets or sets whether to append a newline (\n) to the data.
     /// </summary>
-    public bool AppendNewline { get; set; }
+    public bool AppendNewline { get; init; }
 }

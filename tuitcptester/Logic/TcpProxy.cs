@@ -13,26 +13,13 @@ public class TcpProxy : IDisposable
     private readonly string _remoteHost;
     private readonly int _remotePort;
     private readonly int _localPort;
+    private readonly bool _includePayloadHexDump;
 
     /// <summary>
     /// Event raised when a new log entry is available.
     /// </summary>
     public event Action<string>? OnLog;
 
-    /// <summary>
-    /// Gets the local port the proxy is listening on.
-    /// </summary>
-    public int LocalPort => _localPort;
-
-    /// <summary>
-    /// Gets the remote host the proxy is forwarding to.
-    /// </summary>
-    public string RemoteHost => _remoteHost;
-
-    /// <summary>
-    /// Gets the remote port the proxy is forwarding to.
-    /// </summary>
-    public int RemotePort => _remotePort;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TcpProxy"/> class.
@@ -40,11 +27,13 @@ public class TcpProxy : IDisposable
     /// <param name="localPort">The local port to listen on.</param>
     /// <param name="remoteHost">The remote host to forward to.</param>
     /// <param name="remotePort">The remote port to forward to.</param>
-    public TcpProxy(int localPort, string remoteHost, int remotePort)
+    /// <param name="includePayloadHexDump">Whether forwarded payload logs should include full hex dumps.</param>
+    public TcpProxy(int localPort, string remoteHost, int remotePort, bool includePayloadHexDump)
     {
         _localPort = localPort;
         _remoteHost = remoteHost;
         _remotePort = remotePort;
+        _includePayloadHexDump = includePayloadHexDump;
     }
 
     /// <summary>
@@ -114,16 +103,23 @@ public class TcpProxy : IDisposable
 
     private async Task CopyStreamWithLoggingAsync(NetworkStream source, NetworkStream destination, string prefix, CancellationToken token)
     {
-        byte[] buffer = new byte[8192];
-        int bytesRead;
+        var buffer = new byte[8192];
 
         try
         {
+            int bytesRead;
             while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
             {
                 await destination.WriteAsync(buffer, 0, bytesRead, token);
-                string hexDump = DataUtils.ToHexDump(buffer, 0, bytesRead);
-                Log($"{prefix} Forwarded {bytesRead} bytes:\n{hexDump}");
+                if (_includePayloadHexDump)
+                {
+                    var hexDump = DataUtils.ToHexDump(buffer, 0, bytesRead);
+                    Log($"{prefix} Forwarded {bytesRead} bytes:\n{hexDump}");
+                }
+                else
+                {
+                    Log($"{prefix} Forwarded {bytesRead} bytes.");
+                }
             }
         }
         catch (Exception)

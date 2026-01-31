@@ -1,4 +1,4 @@
-﻿using Terminal.Gui;
+﻿using Terminal.Gui.App;
 using tuitcptester.UI;
 
 namespace tuitcptester;
@@ -14,20 +14,22 @@ public static class Program
     /// <param name="args">The command-line arguments. The first argument can be a path to a configuration file.</param>
     public static void Main(string[] args)
     {
-        Application.Init();
+        var app = Application.Create ();
+        app.Init ();
 
         try
         {
-            var mainView = new MainView();
+            var mainView = new MainView(app);
             if (args.Length > 0 && File.Exists(args[0]))
             {
                 mainView.LoadConfig(args[0]);
             }
-            Application.Run(mainView);
+
+            app.Run(mainView);
         }
-        finally
+        catch (Exception ex)
         {
-            Application.Shutdown();
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 }

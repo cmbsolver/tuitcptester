@@ -21,7 +21,7 @@ public static class DnsHelper
         }
         catch
         {
-            return new List<IPAddress>();
+            return [];
         }
     }
 
